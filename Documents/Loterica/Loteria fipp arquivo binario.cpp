@@ -8,6 +8,8 @@
 #include <windows.h>
 #define TF 10
 
+
+printf("Teste");
 struct TpData{
 int dia, mes, ano;	
 };
