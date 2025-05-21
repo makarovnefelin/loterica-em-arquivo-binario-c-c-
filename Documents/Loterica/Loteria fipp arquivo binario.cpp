@@ -6,10 +6,13 @@
 #include <ctype.h>
 #include <string.h>
 #include <windows.h>
-#define TF 10
+#include <time.h>
+#define TF 5
 
+struct TpDezenas{
+	int numero1, numero2;
+};
 
-printf("Teste");
 struct TpData{
 int dia, mes, ano;	
 };
@@ -18,7 +21,7 @@ struct TpConcurso
 {
 	int numConcurso; //chave primária
 	TpData date;
-	int numSorteados[TF];
+	TpDezenas dezenasSorteadas[TF];
 	char status;
 };
 
@@ -33,8 +36,8 @@ struct TpApostas{
 	int numAposta; //chave primaria
 	int numConcurso;
 	char cpf[15];
-	int qtdeNumApostado;
-	int numApostados[TF];
+	int qtdeNumApostados;
+	TpDezenas dezenas[TF];
 	char status;
 };
 
@@ -249,6 +252,26 @@ void moldeMenuEstatisticas(void) {
 	printf("* * * ESTATISTICA * * *");
 }
 
+//função que sorteia dezenas
+void gerarDezenasSorteadas(TpDezenas dezenas[], int quantidade) {
+    int usados[61] = {0};
+    int count = 0;
+    srand(time(NULL));
+
+    while (count < quantidade) {
+        int n1 = rand() % 60 + 1;
+        int n2 = rand() % 60 + 1;
+
+        if (n1 != n2 && usados[n1] == 0 && usados[n2] == 0) {
+            dezenas[count].numero1 = n1;
+            dezenas[count].numero2 = n2;
+            usados[n1] = 1;
+            usados[n2] = 1;
+            count++;
+        }
+    }
+}
+
 //buscas
 int BuscarApostador(FILE *PtrApostador, char cpf[15])
 {
@@ -390,9 +413,10 @@ void CadastrarConcurso (void){
 		
 	else
 	{
-		gotoxy(57, 22); printf("                  ");
 		while(auxNum > 0)
 			{
+				limparquadro();
+				l=25, c=10;
 				Verifica = BuscarConcurso(PtrConcurso, auxNum);
 				if(Verifica == -1)//Nao existe entao cadastra
 				{
@@ -403,21 +427,36 @@ void CadastrarConcurso (void){
 					gotoxy(l,c);
 					scanf("%d %d %d", &RegConcurso.date.dia, &RegConcurso.date.mes, &RegConcurso.date.ano);
 					c++;
-					//fazer uma busca para sortear os numeros
+					gerarDezenasSorteadas(RegConcurso.dezenasSorteadas, TF);
+					gotoxy(l,c);
+					printf("Numeros sorteados neste concurso:");
+					c++;
+					limparquadro();
+					for (int i = 0; i < TF; i++) {
+					gotoxy(l,c);
+    				printf("Dezena %d: %02d e %02d", i + 1,RegConcurso.dezenasSorteadas[i].numero1, RegConcurso.dezenasSorteadas[i].numero2);
+    				c++;
+    				getch();
+				}
+					limparquadro();
 					RegConcurso.status = 'A';
-					
 					fwrite(&RegConcurso, sizeof(TpConcurso), 1, PtrConcurso);
 					gotoxy(l,c);
 					printf("CONCURSO CADASTRADO com sucesso");
 					c++;
+					getch();
+					limparquadro();
 				}
 				else{
 					gotoxy(l,c);
 					printf("CONCURSO JA CADASTRADO!!!");	
 					c++;
+					getch();
+					limparquadro();
 				}
+				l = 25, c = 10;
 				gotoxy(l,c);
-				printf("\n## CADASTRO de CONCURSOS## ");
+				printf("## CADASTRO de CONCURSOS## ");
 				c++;
 				gotoxy(l,c);
 				printf("NUMERO do CONCURSO: ");
@@ -488,31 +527,41 @@ void CadastrarAposta(void){
 						strcpy(RegAposta.cpf, auxCpf);
 						RegAposta.numConcurso = auxNum;
 						
-						gotoxy(l,c);
-						printf("QUANTAS dezenas deseja apostar (max. 20): ");
-						c++;
-						gotoxy(l,c);	
-						scanf("%d", &RegAposta.qtdeNumApostado);
-						c++;
-						if (RegAposta.qtdeNumApostado > 20)
-						{
-							gotoxy(l,c);	
-							printf("NAO é possivel apostar mais de 20 dezenas. ");
-							c++;
-						}
-							
-						else
-							{
-								gotoxy(l,c);
-								printf("QUAIS numeros deseja APOSTAR:");
-								c++;
-								//fazer um vetor para as dezenas
-								fwrite(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
-								gotoxy(l,c);
-								printf("APOSTA CADASTRADA com sucesso!");
-								c++;
-					}	
-							}
+					printf("QUANTAS dezenas deseja apostar (max. %d): ", TF);
+					scanf("%d", &RegAposta.qtdeNumApostados);
+
+					if (RegAposta.qtdeNumApostados >= 1 && RegAposta.qtdeNumApostados <= TF) {
+    				int usados[61] = {0};
+    				int i = 0;
+
+    				while (i < RegAposta.qtdeNumApostados) {
+       				int n1, n2;
+       				int valido = 1;
+
+        			printf("Digite os 2 números da %dª dezena (1 a 60): ", i + 1);
+        			scanf("%d %d", &n1, &n2);
+
+        			if (n1 < 1 || n1 > 60 || n2 < 1 || n2 > 60 || n1 == n2 || usados[n1] || usados[n2]) {
+            		printf("Números inválidos ou repetidos!\n");
+           			valido = 0;
+        			}
+
+        			if (valido) {
+            		RegAposta.dezenas[i].numero1 = n1;
+            		RegAposta.dezenas[i].numero2 = n2;
+            		usados[n1] = 1;
+            		usados[n2] = 1;
+            		i++;
+        }
+    }
+    				RegAposta.status = 'A';
+    				fwrite(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+    				printf("APOSTA cadastrada com sucesso!\n");
+} 		else {
+    				printf("Quantidade de dezenas inválida.\n");
+}
+	
+			 }
 			
 				else if(VerificaApostador == -1)
 				{
@@ -550,6 +599,7 @@ void CadastrarAposta(void){
 	}
 }
 
+//Alterar
 void AlterarApostador ()
 {
 	FILE *PtrApostador = fopen("Apostadores.dat", "rb+");
@@ -677,7 +727,7 @@ void AlterarConcurso(){
 				fread(&Registro,sizeof(TpConcurso),1,PtrConcurso);
 				printf("\nData: %d %d %d\n",Registro.date.dia,Registro.date.mes,Registro.date.ano);
 				printf("Numero do concurso: %d\n",Registro.numConcurso);
-				printf("Numeros sorteados: %d\n",Registro.numSorteados);
+				printf("Numeros sorteados: %d\n",Registro.dezenasSorteadas);
 				printf("Status: %c\n",Registro.status);
 				printf("Qual Dado deseja Alterar? (Não é possivel alterar o numero do concurso)\n");
 				printf("[A] Data \t [B] Numeros sorteados\n");
@@ -731,8 +781,8 @@ void AlterarAposta(){
 				fread(&Registro,sizeof(TpApostas),1,PtrAposta);
 				printf("\nCPF: %s\n",Registro.cpf);
 				printf("Numero de aposta: %d\n",Registro.numAposta);
-				printf("Numeros apostados: %d\n",Registro.numApostados);
-				printf("Quantidade De numeros apostados: %d",Registro.qtdeNumApostado);
+				printf("Numeros apostados: %d\n",Registro.dezenas);
+				printf("Quantidade De numeros apostados: %d",Registro.qtdeNumApostados);
 				printf("Status: %c\n",Registro.status);
 				printf("Qual Dado deseja Alterar? (Não é possivel alterar o CPF e Numero de aposta)\n");
 				printf("[A] Numeros apostados \t [B]Quantidade de numeros apostados \n");
@@ -743,13 +793,13 @@ void AlterarAposta(){
 						{
 							printf("\n## Alterar Numeros apostados ## \n");
 							printf("Digite: \n"); 
-							scanf("%d",&Registro.numApostados);
+							scanf("%d",&Registro.dezenas);
 							break;
 						}
 					case 'B':{
 						printf("\n## Alterar quantidade de numeros apostados ##\n");
 						printf("Digite: \n");
-						scanf("%d",&Registro.qtdeNumApostado);
+						scanf("%d",&Registro.qtdeNumApostados);
 						break;
 					}
 				
@@ -763,21 +813,62 @@ void AlterarAposta(){
 	}
 }
 
+//Exibir
+void exibirApostador(void){
+	FILE *PtrApostador = fopen("Apostadores.dat", "rb");
+	TpApostadores RegApostador;
+	int l=25, c=10;
+	moldeMenuExibir();
+	limparquadro();
+	gotoxy(l,c);
+	printf("** EXIBIR APOSTADORES **");
+	c++;
+	if(PtrApostador == NULL)
+	{
+		gotoxy(l,c);
+		printf("Erro de Abertura!");
+		c++;
+	}
+	else
+	{
+		rewind(PtrApostador);
+		fread(&RegApostador, sizeof(TpApostadores), 1, PtrApostador);
+		while(!feof(PtrApostador))
+		{
+			gotoxy(l,c);
+			printf("CPF: %s", RegApostador.cpf);
+			c++;
+			gotoxy(l,c);
+			printf("Nome: %s", RegApostador.nome);
+			c++;
+			gotoxy(l,c);
+			printf("Telefone: %d", RegApostador.numTel);
+			c++;
+			fread(&RegApostador, sizeof(TpApostadores), 1, PtrApostador);
+		}
+	getch();
+	fclose(PtrApostador);	
+	}
+}
+
+void exibirConcurso(void){
+	
+}
+
 char menu(void) {
 	printf("# # # # MENU # # # # \n");
 	textcolor(1);
-	printf("[A] Cadastrar APOSTADORES\n");
-	printf("[B] Cadastrar CONCURSOS\n");
-	printf("[C] Cadastrar APOSTAS\n");
+	printf("[A] CADASTRAR APOSTADORES\n");
+	printf("[B] CADASTRAR CONCURSOS\n");
+	printf("[C] CADASTRAR APOSTAS\n");
 	textcolor(2);
-	printf("[E] Exibir CLIENTES\n");
-	printf("[F] Exibir MOTOQUEIROS\n");
-	printf("[G] Exibir PIZZAS\n");
-	printf("[H] Exibir PEDIDOS\n");
+	printf("[E] ALTERAR APOSTADORES\n");
+	printf("[F] ALTERAR CONCURSOS\n");
+	printf("[G] ALTERAR APOSTAS \n");
 	textcolor(3);
-	printf("[I] Alterar APOSTADORES\n");
-	printf("[J] Alterar CONCURSOS\n");
-	printf("[K] Alterar APOSTAS\n");
+	printf("[I] EXIBIR APOSTADORES\n");
+	printf("[J] EXIBIR CONCURSOS\n");
+	printf("[K] EXIBIR APOSTAS\n");
 	textcolor(5);
 	printf("[M] Excluir CLIENTES\n");
 	printf("[N] Excluir MOTOQUEIROS\n");
@@ -796,10 +887,10 @@ char menuNum(void) {
 	printf("[1] Cadastrar");
 
 	gotoxy(38,12);
-	printf("[2] Exibir");
+	printf("[2] Alterar");
 
 	gotoxy(60,12);
-	printf("[3] Alterar");
+	printf("[3] Exibir");
 
 	gotoxy(15,19);
 	printf("[4] Excluir");
@@ -1013,6 +1104,15 @@ int main(void){
 				}
 
 			break;
+			
+			case '3':
+				op = menuExib ();
+				switch(op){
+					case '1':
+						exibirApostador();
+						break;
+				}
+			break;	
 		}
 
 	} while(op != 27);
