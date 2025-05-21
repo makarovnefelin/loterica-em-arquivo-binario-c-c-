@@ -1,0 +1,1 @@
+# loterica-em-arquivo-binario-c-c-
