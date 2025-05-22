@@ -43,7 +43,7 @@ struct TpApostas{
 
 
 
-//AlteraÃ§Ã£o
+//Alteração
 void AlterarApostador(void);
 void AlterarConcurso(void);
 void AlterarAposta(void);
@@ -370,13 +370,15 @@ void CadastrarApostador(void)
 								gotoxy(l,c);
 								printf("Apostador ja CADASTRADO");
 								c++;
-						}
+								getch();
+							}
+							limparquadro();
 							gotoxy(l,c);
 							printf(" ##Cadastrar APOSTADOR ##");
 							c++;
 							gotoxy(l,c);
 							printf("CPF do APOSTADOR que deseja cadastrar"); fflush(stdin);
-							gotoxy(l,c);
+							c++;
 							gotoxy(l,c);
 							gets(auxcpf);
 							c++;
@@ -647,7 +649,7 @@ void AlterarApostador ()
 	limparquadro();
 	
 	gotoxy(l,c);	
-	printf("## ALTERAR APOSTADOR ##");
+	printf("** ALTERAR APOSTADOR **");
 	c++;
 	if (PtrApostador == NULL){
 		gotoxy(l,c);	
@@ -743,110 +745,295 @@ void AlterarConcurso(){
 	
 	FILE *PtrConcurso = fopen("Concurso.dat", "rb+");
 	TpConcurso Registro;
-	int Verifica;
-	char opcao; 
-	clrscr();
-	printf("\n## Alterar Concurso ##\n");
-	if (PtrConcurso == NULL)
-		printf("Erro Em Abrir Arquivo!\n");
-	else
-	{
-		printf(" Digite o numero do concurso: \n"); 
-		scanf("%d",&Registro.numConcurso);
-		Verifica = BuscarConcurso(PtrConcurso, Registro.numConcurso);
-		if(Verifica == -1)
-			printf("Concurso Não Encontrado!!!\n");
-		else
-		{
-				printf("\n*** Detalhes do Concurso ***\n");
-				fseek(PtrConcurso,Verifica,0);  //fseek(PtrVeic,desl,SEEK_SET);
-				fread(&Registro,sizeof(TpConcurso),1,PtrConcurso);
-				printf("\nData: %d %d %d\n",Registro.date.dia,Registro.date.mes,Registro.date.ano);
-				printf("Numero do concurso: %d\n",Registro.numConcurso);
-				printf("Numeros sorteados: %d\n",Registro.dezenasSorteadas);
-				printf("Status: %c\n",Registro.status);
-				printf("Qual Dado deseja Alterar? (Não é possivel alterar o numero do concurso)\n");
-				printf("[A] Data \t [B] Numeros sorteados\n");
-				opcao = toupper(getche());
-				switch(opcao)
-				{
-					case 'A':
-						{
-							printf("\n## Alterar Data ## \n");
-							printf("Digite nova data: \n");
-							scanf("%d %d %d",&Registro.date.dia,&Registro.date.mes,&Registro.date.ano);
-							break;
-						}
-				//	case 'B':{
-				//		printf("\n## Alterar  ##\n");
-				//		printf("Novo numero e telefone: \n"); fflush(stdin);
-				//		scanf("%d",&Registro.numTel);
-				//		break;
-				//	}
-				
-				}
-				
-				fseek(PtrConcurso, -sizeof(TpConcurso), 1); //posiciona o ponteiro onde vai ser alterado, o -sizeof acontece por que o ponteiro sempre anda mais um, e a posição que queremos está antes;
-				fwrite(&Registro, sizeof(TpConcurso), 1, PtrConcurso); //grava no registro onde esta a posição atual do ponteiro.
-				printf("Dados Atualizados!!");
-				fclose(PtrConcurso);
-		}
-	}
-}
-void AlterarAposta(){
-	
-	FILE *PtrAposta = fopen("Apostas.dat", "rb+");
-	TpApostas Registro;
-	int Verifica;
+	int Verifica, l=25,c=10;
 	char opcao; 
 	clrscr();
 	
 	moldeMenuAlterar();
 	limparquadro();
-	printf("\n## Alterar Aposta ##\n");
-	if (PtrAposta == NULL)
-		printf("Erro Em Abrir Arquivo!\n");
+	
+	gotoxy(l,c);
+	printf("** Alterar Concurso **");
+	c++;
+	if (PtrConcurso == NULL){
+		gotoxy(l,c);
+		printf("Erro Em Abrir Arquivo!");
+		c++;
+	}	
 	else
 	{
-		printf(" Digite o numero da aposta: \n");
-		scanf("%d",&Registro.numAposta);
-		Verifica = BuscarAposta(PtrAposta, Registro.numAposta);
-		if(Verifica == -1)
-			printf("Aposta Não Encontrado!!!\n");
+		gotoxy(l,c);
+		printf(" Digite o numero do concurso: ");
+		c++;
+		gotoxy(l,c); 
+		scanf("%d",&Registro.numConcurso);
+		c++;
+		Verifica = BuscarConcurso(PtrConcurso, Registro.numConcurso);
+		if(Verifica == -1){
+			gotoxy(l,c);
+			printf("Concurso Não Encontrado!!!");
+			c++;
+		}
+			
 		else
 		{
-				printf("\n*** Detalhes da Aposta ***\n");
-				fseek(PtrAposta,Verifica,0);  //fseek(PtrVeic,desl,SEEK_SET);
-				fread(&Registro,sizeof(TpApostas),1,PtrAposta);
-				printf("\nCPF: %s\n",Registro.cpf);
-				printf("Numero de aposta: %d\n",Registro.numAposta);
-				printf("Numeros apostados: %d\n",Registro.dezenas);
-				printf("Quantidade De numeros apostados: %d",Registro.qtdeNumApostados);
-				printf("Status: %c\n",Registro.status);
-				printf("Qual Dado deseja Alterar? (Não é possivel alterar o CPF e Numero de aposta)\n");
-				printf("[A] Numeros apostados \t [B]Quantidade de numeros apostados \n");
+				l=25, c=10;
+				limparquadro();
+				gotoxy(l,c);
+				printf("** Detalhes do Concurso **");
+				c++;
+				
+				fseek(PtrConcurso,Verifica,0);  //fseek(PtrVeic,desl,SEEK_SET);
+				fread(&Registro,sizeof(TpConcurso),1,PtrConcurso);
+				gotoxy(l,c);
+				printf("Data: %d %d %d",Registro.date.dia,Registro.date.mes,Registro.date.ano);
+				c++;
+				gotoxy(l,c);
+				printf("Numero do concurso: %d",Registro.numConcurso);
+				c++;
+				gotoxy(l,c);
+				printf("Status: %c",Registro.status);
+				c++;
+				gotoxy(l,c);
+				printf("Dezenas sorteadas: ");
+				c++;
+				for (int i = 0; i < TF; i++) {
+					gotoxy(l,c);
+    				printf("Dezena %d: %02d e %02d", i + 1,Registro.dezenasSorteadas[i].numero1, Registro.dezenasSorteadas[i].numero2);
+    				c++;
+    				getch();
+				}
+				limparquadro();
+				l=25, c=10;
+				gotoxy(l,c);
+				printf("Qual Dado deseja Alterar?");
+				c++;
+				gotoxy(l,c);
+				printf("[A] Data \t [B] Numeros sorteados");
+				c++;
 				opcao = toupper(getche());
 				switch(opcao)
 				{
 					case 'A':
 						{
-							printf("\n## Alterar Numeros apostados ## \n");
-							printf("Digite: \n"); 
-							scanf("%d",&Registro.dezenas);
+							limparquadro();
+							gotoxy(l,c);
+							printf("## Alterar Data ## ");
+							c++;
+							gotoxy(l,c);
+							printf("Digite nova data: ");
+							c++;
+							gotoxy(l,c);
+							scanf("%d %d %d",&Registro.date.dia,&Registro.date.mes,&Registro.date.ano);
+							c++;
 							break;
 						}
-					case 'B':{
-						printf("\n## Alterar quantidade de numeros apostados ##\n");
-						printf("Digite: \n");
-						scanf("%d",&Registro.qtdeNumApostados);
-						break;
-					}
-				
+					case'B':
+						{
+							limparquadro();
+							gotoxy(l,c);
+							printf("** ALTERAR NUMEROS SORTEADOS **");
+							c++;
+							gerarDezenasSorteadas(Registro.dezenasSorteadas, TF);
+							printf("Novas dezenas: ");
+							for (int i = 0; i < TF; i++) {
+							gotoxy(l,c);
+    						printf("Dezena %d: %02d e %02d", i + 1,Registro.dezenasSorteadas[i].numero1, Registro.dezenasSorteadas[i].numero2);
+    						c++;
+    						getch();
+							}
+						}
 				}
+				
+				fseek(PtrConcurso, -sizeof(TpConcurso), 1); //posiciona o ponteiro onde vai ser alterado, o -sizeof acontece por que o ponteiro sempre anda mais um, e a posição que queremos está antes;
+				fwrite(&Registro, sizeof(TpConcurso), 1, PtrConcurso); //grava no registro onde esta a posição atual do ponteiro.
+				
+				gotoxy(l,c);
+				printf("Dados Atualizados!!");
+				c++;
+				getch();
+				fclose(PtrConcurso);
+		}
+	}
+}
+
+
+void AlterarAposta(){
+	
+	FILE *PtrAposta = fopen("Apostas.dat", "rb+");
+	TpApostas Registro;
+	int Verifica, l=25, c=10;
+	char opcao; 
+	clrscr();
+	
+	moldeMenuAlterar();
+	limparquadro();
+	
+	gotoxy(l,c);
+	printf("** ALTERAR APOSTA **");
+	c++;
+	if (PtrAposta == NULL){
+		gotoxy(l,c);
+		printf("Erro Em Abrir Arquivo!");
+		c++;
+	}
+		
+	else
+	{
+		gotoxy(l,c);
+		printf(" Digite o numero da aposta: ");
+		c++;
+		gotoxy(l,c);
+		scanf("%d",&Registro.numAposta);
+		c++;
+		Verifica = BuscarAposta(PtrAposta, Registro.numAposta);
+		if(Verifica == -1)
+			{
+				gotoxy(l,c);
+				printf("Aposta Nao Encontrada!!!");
+				c++;
+				getch();
+			}
+			
+		else
+		{
+				l=25,c=10;
+				limparquadro();
+				gotoxy(l,c);
+				printf("** Detalhes da Aposta **");
+				c++;
+				fseek(PtrAposta,Verifica,0);  //fseek(PtrVeic,desl,SEEK_SET);
+				fread(&Registro,sizeof(TpApostas),1,PtrAposta);
+				gotoxy(l,c);
+				printf("CPF: %s",Registro.cpf);
+				c++;
+				gotoxy(l,c);
+				printf("Numero de aposta: %d",Registro.numAposta);
+				c++;
+				gotoxy(l,c);
+				printf("Numeros apostados: %d",Registro.dezenas);
+				c++;
+				gotoxy(l,c);
+				printf("Quantidade De numeros apostados: %d",Registro.qtdeNumApostados);
+				c++;
+				gotoxy(l,c);
+				printf("Status: %c",Registro.status);
+				c++;
+				gotoxy(l,c);
+				printf("Qual Dado deseja Alterar?");
+				c++;
+				gotoxy(l,c);
+				printf("[A] Numeros apostados \t [B]Quant. Num. Apostados ");
+				c++;
+				opcao = toupper(getch());
+			switch (opcao) {
+              case 'A': {
+    		int usados[61] = {0};
+   			int i = 0;
+    		int n1, n2;
+    		int valido;
+
+    while (i < Registro.qtdeNumApostados) {
+        do {
+            limparquadro();
+            l = 25;
+            c = 10;
+
+            gotoxy(l, c);
+            printf("## Alterar Numeros Apostados ##");
+            c++;
+            gotoxy(l, c);
+            printf("Par %d - Digite dois números entre 1 e 60:", i + 1);
+            c++;
+            gotoxy(l, c);
+            scanf("%d %d", &n1, &n2);
+            c++;
+            valido = 1;
+
+            if (n1 < 1 || n1 > 60 || n2 < 1 || n2 > 60 || n1 == n2 || usados[n1] || usados[n2]) {
+                gotoxy(l, c);
+                printf("Números invalidos ou ja usados!");
+                c++;
+                getch();
+                valido = 0;
+            }
+
+        } while (!valido);
+
+        Registro.dezenas[i].numero1 = n1;
+        Registro.dezenas[i].numero2 = n2;
+        usados[n1] = 1;
+        usados[n2] = 1;
+        i++;
+        
+    }
+	getch();            
+    break;
+	}
+
+
+                case 'B': {
+    int usados[61] = {0};
+    int n1, n2;
+    int valido;
+
+    l = 25, c = 10;
+    limparquadro();
+    gotoxy(l, c);
+    printf("## Alterar Quantidade de Números Apostados ##");
+    c++;
+    gotoxy(l, c);
+    printf("Digite a nova quantidade de pares (máx: %d): ", TF);
+    c++;
+    scanf("%d", &Registro.qtdeNumApostados);
+
+    if (Registro.qtdeNumApostados > TF || Registro.qtdeNumApostados <= 0) {
+        gotoxy(l, c);
+        printf("Quantidade inválida! Deve ser entre 1 e %d.", TF);
+        c++;
+        getch();
+    } else {
+        for (int i = 0; i < Registro.qtdeNumApostados; i++) {
+            do {
+                limparquadro();
+                l = 25;
+                c = 10;
+                gotoxy(l, c);
+                printf("## Alterar Quantidade de Números Apostados ##");
+                c++;
+                gotoxy(l, c);
+                printf("Par %d - Digite dois números entre 1 e 60:", i + 1);
+                c++;
+                gotoxy(l, c);
+                scanf("%d %d", &n1, &n2);
+                c++;
+                valido = 1;
+
+                if (n1 < 1 || n1 > 60 || n2 < 1 || n2 > 60 || n1 == n2 || usados[n1] || usados[n2]) {
+                    gotoxy(l, c);
+                    printf("Números invalidos ou ja usados!");
+                    c++;
+                    getch();
+                    valido = 0;
+                }
+
+            } while (!valido);
+
+            Registro.dezenas[i].numero1 = n1;
+            Registro.dezenas[i].numero2 = n2;
+            usados[n1] = 1;
+            usados[n2] = 1;
+        }
+    }
+    break;
+}
+            }
 				
 				fseek(PtrAposta, -sizeof(TpApostas), 1); //posiciona o ponteiro onde vai ser alterado, o -sizeof acontece por que o ponteiro sempre anda mais um, e a posição que queremos está antes;
 				fwrite(&Registro, sizeof(TpApostas), 1, PtrAposta); //grava no registro onde esta a posição atual do ponteiro.
+				gotoxy(l,c);
 				printf("Dados Atualizados!!");
+				c++;
 				fclose(PtrAposta);
 		}
 	}
