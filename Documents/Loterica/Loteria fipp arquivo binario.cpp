@@ -140,6 +140,20 @@ int validarInt(char str[11]){
 	return 1;
 }
 
+int validarData(int dia, int mes, int ano) {
+    if (ano != 2025) return 0;
+    if (mes < 1 || mes > 12) return 0;
+
+    // Dias máximos por mês (2025 não é bissexto, então fevereiro tem 28 dias)
+    int diasNoMes[12] = {31, 28, 31, 30, 31, 30,
+                         31, 31, 30, 31, 30, 31};
+
+    if (dia < 1 || dia > diasNoMes[mes - 1]) return 0;
+
+    return 1;
+}
+
+
 int lerInteiroValido(int l, int c, int maxColuna) {
     char buffer[100], ch;
     char *endptr;
@@ -448,16 +462,16 @@ void entradaTextoControlada(int x, int y, int maxLen, char *buffer) {
         gotoxy(x + pos, y);
         tecla = getch();
 
-        if (tecla == 13) { // Enter
+        if (tecla == 13) { // Enter tabela ASCII :)
             break;
         }
-        else if (tecla == 8) { // Backspace
+        else if (tecla == 8) { // Backspace tabela ASCII
             if (pos > 0) {
                 pos--;
                 buffer[pos] = '\0';
 
                 gotoxy(x + pos, y);
-                printf(" ");  // apaga caractere na tela
+                printf(" "); 
                 gotoxy(x + pos, y);
             }
         }
@@ -575,15 +589,14 @@ void CadastrarApostador(void)
 }
 
 
-
 void CadastrarConcurso (void){
 	FILE *PtrConcurso = fopen("Concurso.dat", "ab+");
 	TpConcurso RegConcurso;
 	int Verifica, auxNum, l=25, c=10;
-	
+
 	moldeMenuCadastro();
 	limparquadro();
-	
+
 	gotoxy(l,c);
 	printf("## CADASTRO de CONCURSOS## ");
 	c++;
@@ -592,71 +605,78 @@ void CadastrarConcurso (void){
 	c++;
 	auxNum = lerInteiroValido(l + 5, c, l + 15);
 	c++;
-	
-	if(PtrConcurso == NULL)
-	{
+
+	if(PtrConcurso == NULL) {
 		gotoxy(l,c);
 		printf("Erro de Abertura!!");
 		c++;
-	}
-		
-	else
-	{
-		while(auxNum > 0)
-			{
+	} else {
+		while(auxNum > 0) {
+			limparquadro();
+			l = 25, c = 10;
+			Verifica = BuscarConcurso(PtrConcurso, auxNum);
+			if(Verifica == -1) { // Nao existe, então cadastra
+				RegConcurso.numConcurso = auxNum;
+				do {
+					limparquadro();
+					l=25, c=10;
+					gotoxy(l,c);
+					printf("DATA do CONCURSO (D M A): ");
+					c++;
+					gotoxy(l,c);
+					scanf("%d/%d/%d", &RegConcurso.date.dia, &RegConcurso.date.mes, &RegConcurso.date.ano);
+					if (!validarData(RegConcurso.date.dia, RegConcurso.date.mes, RegConcurso.date.ano)) {
+						c++;
+						gotoxy(l,c);
+						printf("Data invalida. Informe uma data valida de 2025.");
+						c++;
+						getch();
+						c--;
+						c--;
+					}
+				} while (!validarData(RegConcurso.date.dia, RegConcurso.date.mes, RegConcurso.date.ano));
+
+				gerarDezenasSorteadas(RegConcurso.dezenasSorteadas, TF);
+				gotoxy(l,c);
+				printf("Numeros sorteados neste concurso:");
+				c++;
 				limparquadro();
-				l=25, c=10;
-				Verifica = BuscarConcurso(PtrConcurso, auxNum);
-				if(Verifica == -1)//Nao existe entao cadastra
-				{
-					RegConcurso.numConcurso = auxNum;
+				for (int i = 0; i < TF; i++) {
 					gotoxy(l,c);
-					printf("DATA do CONCURSO (D, M, A): ");
-					c++;
-					gotoxy(l,c);
-					scanf("%d %d %d", &RegConcurso.date.dia, &RegConcurso.date.mes, &RegConcurso.date.ano);
-					c++;
-					gerarDezenasSorteadas(RegConcurso.dezenasSorteadas, TF);
-					gotoxy(l,c);
-					printf("Numeros sorteados neste concurso:");
-					c++;
-					limparquadro();
-					for (int i = 0; i < TF; i++) {
-					gotoxy(l,c);
-    				printf("Dezena %d: %02d e %02d", i + 1,RegConcurso.dezenasSorteadas[i].numero1, RegConcurso.dezenasSorteadas[i].numero2);
-    				c++;
-    				getch();
-				}
-					limparquadro();
-					RegConcurso.status = 'A';
-					fwrite(&RegConcurso, sizeof(TpConcurso), 1, PtrConcurso);
-					gotoxy(l,c);
-					printf("CONCURSO CADASTRADO com sucesso");
+					printf("Dezena %d: %02d e %02d", i + 1, RegConcurso.dezenasSorteadas[i].numero1, RegConcurso.dezenasSorteadas[i].numero2);
 					c++;
 					getch();
-					limparquadro();
 				}
-				else{
-					gotoxy(l,c);
-					printf("CONCURSO JA CADASTRADO!!!");	
-					c++;
-					getch();
-					limparquadro();
-				}
-				l = 25, c = 10;
+				limparquadro();
+				RegConcurso.status = 'A';
+				fwrite(&RegConcurso, sizeof(TpConcurso), 1, PtrConcurso);
 				gotoxy(l,c);
-				printf("## CADASTRO de CONCURSOS## ");
+				printf("CONCURSO CADASTRADO com sucesso");
 				c++;
+				getch();
+				limparquadro();
+			} else {
 				gotoxy(l,c);
-				printf("NUMERO do CONCURSO: ");
+				printf("CONCURSO JA CADASTRADO!!!");	
 				c++;
-				auxNum = lerInteiroValido(l + 5, c, l + 15);
-				c++;
+				getch();
+				limparquadro();
 			}
+			l = 25, c = 10;
+			gotoxy(l,c);
+			printf("## CADASTRO de CONCURSOS## ");
+			c++;
+			gotoxy(l,c);
+			printf("NUMERO do CONCURSO: ");
+			c++;
+			auxNum = lerInteiroValido(l + 5, c, l + 15);
+			c++;
+		}
 		getch();
-		fclose (PtrConcurso);
+		fclose(PtrConcurso);
 	}
 }
+
 
 
 
@@ -822,111 +842,122 @@ void CadastrarAposta(void) {
 
 
 //Alterar
-void AlterarApostador ()
-{
-	FILE *PtrApostador = fopen("Apostadores.dat", "rb+");
-	TpApostadores Registro;
-	int Verifica, l=25, c=10;
-	char opcao; 
-	
-	moldeMenuAlterar();
-	limparquadro();
-	
-	gotoxy(l,c);	
-	printf("** ALTERAR APOSTADOR **");
-	c++;
-	if (PtrApostador == NULL)
+void AlterarApostador() {
+    FILE *PtrApostador = fopen("Apostadores.dat", "rb+");
+    TpApostadores Registro;
+    int Verifica, l = 25, c = 10;
+    char opcao;
+    char auxCpf[15];
+
+    moldeMenuAlterar();
+    limparquadro();
+
+    gotoxy(l, c++);
+    printf("** ALTERAR APOSTADOR **");
+
+    if (PtrApostador == NULL) 
 	{
-		gotoxy(l,c);	
-		printf("Erro Em Abrir Arquivo!");
-		c++;
-	}
-	
-	else
+        gotoxy(l, c++);
+        printf("Erro em abrir o arquivo!");
+        getch();
+        return;
+    }
+
+    gotoxy(l, c);
+    printf("Digite o CPF do apostador: ");
+    c++;
+    gotoxy(l, c);
+    entradaTextoControlada(l, c, 14, auxCpf);
+
+    if (validarCPF(auxCpf) != 1) 
 	{
-		gotoxy(l,c);
-		printf("Digite o CPF do apostador: "); fflush(stdin);
-		c++;
-		gotoxy(l,c);	
-		gets(Registro.cpf);
-		c++;
-		Verifica = BuscarApostador(PtrApostador, Registro.cpf);
-		if(Verifica == -1)
+        c++;
+        gotoxy(l, c++);
+        printf("CPF invalido!");
+        getch();
+    } 
+	else 
+	{
+        Verifica = BuscarApostador(PtrApostador, auxCpf);
+        if (Verifica == -1) 
 		{
-			gotoxy(l,c);
-			printf("Apostador Não Encontrado!!!");
+            c++;
+            gotoxy(l, c);
+            printf("Apostador nao encontrado!");
+            c++;
+            getch();
+        } 
+		else 
+		{
+            fseek(PtrApostador, Verifica, SEEK_SET);
+            fread(&Registro, sizeof(TpApostadores), 1, PtrApostador);
+
+            c++;
+            gotoxy(l, c); 
+			printf("*** Detalhes do Apostador ***");
+            c++;
+            gotoxy(l, c); 
+			printf("CPF: %s", Registro.cpf); 
 			c++;
-			getch();
-		}
-			
-		else
-		{
-				gotoxy(l,c);
-				printf("*** Detalhes do Apostador ***");
+            gotoxy(l, c); 
+			printf("Nome: %s", Registro.nome); 
+			c++;
+            gotoxy(l, c); 
+			printf("Telefone: %s", Registro.numTel);
+			c++;
+            gotoxy(l, c); 
+			printf("Status: %c", Registro.status);
+			c++;
+            gotoxy(l, c); 
+			printf("Qual dado deseja alterar?");
+			c++;
+            gotoxy(l, c); 
+			printf("[A] Nome \t [B] Telefone");
+			c++;
+
+            opcao = toupper(getche());
+
+            limparquadro();
+            l = 25; c = 10;
+
+            if (opcao == 'A') {
+                gotoxy(l, c); 
+				printf("## Alterar Nome ##");
 				c++;
-				fseek(PtrApostador,Verifica,0);  //fseek(PtrVeic,desl,SEEK_SET);
-				fread(&Registro,sizeof(TpApostadores),1,PtrApostador);
-				gotoxy(l,c);	
-				printf("CPF: %s",Registro.cpf);
+                gotoxy(l, c); 
+				printf("Digite novo nome: ");
 				c++;
-				gotoxy(l,c);	
-				printf("Nome: %s",Registro.nome);
+                gotoxy(l, c);
+                entradaTextoControlada(l, c, 30, Registro.nome);
+                c++;
+            }
+
+            if (opcao == 'B') {
+                gotoxy(l, c); 
+				printf("## Alterar Telefone ##");
 				c++;
-				gotoxy(l,c);	
-				printf("Telefone: %d",Registro.numTel);
+                gotoxy(l, c); 
+				printf("Digite novo telefone: ");
 				c++;
-				gotoxy(l,c);	
-				printf("Status: %c",Registro.status);
-				c++;
-				gotoxy(l,c);	
-				printf("Qual Dado deseja Alterar?");
-				c++;
-				gotoxy(l,c);		
-				printf("[A] Nome \t [B]Telefone");
-				c++;
-				opcao = toupper(getche());
-				limparquadro();
-				l = 25, c=10;
-				switch(opcao)
-				{
-					case 'A':
-						{
-							gotoxy(l,c);	
-							printf("## Alterar Nome ## ");
-							c++;
-							gotoxy(l,c);	
-							printf("Digite novo nome: "); fflush(stdin);
-							c++;
-							gotoxy(l,c);	
-							gets (Registro.nome);
-							c++;
-							break;
-						}
-					case 'B':
-					{
-						gotoxy(l,c);	
-						printf("## Alterar Telefone ##");
-						c++;
-						gotoxy(l,c);	
-						printf("Novo numero de telefone: "); 
-						c++;
-						gotoxy(l,c);	
-						scanf("%d",&Registro.numTel);
-						c++;
-						break;
-					}
-				
-				}
-				
-				fseek(PtrApostador, -sizeof(TpApostadores), 1); //posiciona o ponteiro onde vai ser alterado, o -sizeof acontece por que o ponteiro sempre anda mais um, e a posição que queremos está antes;
-				fwrite(&Registro, sizeof(TpApostadores), 1, PtrApostador); //grava no registro onde esta a posição atual do ponteiro.
-				gotoxy(l,c);	
-				printf("Dados Atualizados!!");
-				getch();
-				fclose(PtrApostador);
-		}
-	}
+                gotoxy(l, c);
+                entradaTextoControlada(l, c, 14, Registro.numTel);
+                c++;
+            }
+
+            fseek(PtrApostador, -sizeof(TpApostadores), SEEK_CUR);
+            fwrite(&Registro, sizeof(TpApostadores), 1, PtrApostador);
+
+            gotoxy(l, c);
+            printf("Dados atualizados com sucesso!");
+            c++;
+            getch();
+        }
+    }
+
+    fclose(PtrApostador);
 }
+
+
 
 void AlterarConcurso(){
 	
@@ -950,16 +981,17 @@ void AlterarConcurso(){
 	else
 	{
 		gotoxy(l,c);
-		printf(" Digite o numero do concurso: ");
+		printf("Digite o numero do concurso: ");
 		c++;
 		gotoxy(l,c); 
-		scanf("%d",&Registro.numConcurso);
+		Registro.numConcurso = lerInteiroValido(l, c, 55);
 		c++;
 		Verifica = BuscarConcurso(PtrConcurso, Registro.numConcurso);
 		if(Verifica == -1){
 			gotoxy(l,c);
-			printf("Concurso Não Encontrado!!!");
+			printf("Concurso Nao Encontrado!!!");
 			c++;
+			getch();
 		}
 			
 		else
