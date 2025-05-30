@@ -1,4 +1,4 @@
-//LotericaFipp Thales Eduardo Mendes de OLiveira, Renan Carvalho Silva , Carlos Francisco 
+//LotericaFipp Thales Eduardo Mendes de OLiveira, Renan Carvalho Silva
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,6 +41,14 @@ struct TpApostas{
 	char status;
 };
 
+struct TpResumo{
+	int numConcurso, premiados;
+};
+
+struct TpRankingConcurso{
+	int numConcurso, totalApostas;
+};
+
 //validações
 int validarCPF(char ncpf[15]);
 int validarInt(char str[11]);
@@ -49,6 +57,11 @@ int validarInt(char str[11]);
 void AlterarApostador(void);
 void AlterarConcurso(void);
 void AlterarAposta(void);
+
+//exclusões logicas
+void exclusaoLogicaConcurso(void);
+void exclusaoLogicaApostador(void);
+
 
 //Metodos de Busca
 int BuscarApostador(FILE *ptr, int cpf[15]);
@@ -265,7 +278,7 @@ void moldeCadastrar(void){
 	moldura(11, 6, 74, 8, 7, 12); //titulo
 
 	gotoxy(33, 7); 
-	printf("* * * PIZZARIA * * *");
+	printf("* * * LOTERICAFIPP * * *");
 			
 }
 
@@ -287,8 +300,20 @@ void moldeMenuExcluir(void){
 	moldura(18,10,36,14,7,5); //ITEM 1 
 	moldura(49,10,67,14,7,5); //ITEM 2
 
-	moldura(18,17,36,21,7,5); //ITEM 3 
-	moldura(49,17,67,21,7,5); //ITEM 4  
+	moldura(18,17,36,21,7,5); //ITEM 3  
+
+	gotoxy(33, 7); 
+	printf("* * * EXCLUIR * * *");
+}
+
+
+void moldeMenuExcluirFisica(void){
+	moldura(10, 5, 75, 23, 7, 4); //borda externa //64
+	moldura(11, 6, 74, 8, 7, 12); //titulo
+
+	moldura(18,10,36,14,7,5); //ITEM 1 
+	moldura(49,10,67,14,7,5); //ITEM 2
+
 
 	gotoxy(33, 7); 
 	printf("* * * EXCLUIR * * *");
@@ -352,7 +377,8 @@ void moldeMenuInicial(void){
 
 	gotoxy(33, 7); 
 	printf("* * * LOTERICA FIPP * * *");
-			
+	gotoxy(15, 25);
+	printf("Feito por: Renan Carvalho Silva e Thales Eduardo Mendes de Oliveira");	
 }
 
 void moldeMenuRelatorio(void) {
@@ -449,8 +475,132 @@ int BuscarAposta (FILE * PtrAposta, int NumAposta)
 	if(!feof(PtrAposta))
 		return ftell(PtrAposta) - sizeof(TpApostas);
 	else
-		return -1;
+		return -1; 
 }
+
+int BuscaBinariaConcurso(FILE *PtrConcurso, int numBusca) {
+    TpConcurso RegConcurso;
+    int ini = 0;
+    int fim = 0;
+    int meio;
+    int pos = -1;
+
+    fseek(PtrConcurso, 0, 2);  // fim do arquivo
+    fim = ftell(PtrConcurso) / sizeof(TpConcurso) - 1;
+
+    while (ini <= fim && pos == -1) {
+        meio = (ini + fim) / 2;
+        fseek(PtrConcurso, meio * sizeof(TpConcurso), 0);
+        fread(&RegConcurso, sizeof(TpConcurso), 1, PtrConcurso);
+
+        if (RegConcurso.numConcurso == numBusca)
+            pos = meio;
+        else if (RegConcurso.numConcurso < numBusca)
+            ini = meio + 1;
+        else
+            fim = meio - 1;
+    }
+
+    return pos;
+}
+
+
+//metodos de Ordenação
+void BubbleSortResumo(TpResumo resumo[], int total) {
+    int i = 0;
+    while (i < total - 1) {
+        int j = 0;
+        while (j < total - i - 1) {
+            if (resumo[j].premiados < resumo[j + 1].premiados) {
+                TpResumo temp = resumo[j];
+                resumo[j] = resumo[j + 1];
+                resumo[j + 1] = temp;
+            }
+            j++;
+        }
+        i++;
+    }
+}
+
+void BubbleSortRanking(FILE *PtrRanking, int n) {
+    TpRankingConcurso reg1, reg2;
+    int i, trocou = 1;
+
+    while (trocou == 1) {
+        trocou = 0;
+        i = 0;
+        while (i < n - 1) {
+            fseek(PtrRanking, i * sizeof(TpRankingConcurso), 0);
+            fread(&reg1, sizeof(TpRankingConcurso), 1, PtrRanking);
+            fread(&reg2, sizeof(TpRankingConcurso), 1, PtrRanking);
+
+            if (reg1.totalApostas < reg2.totalApostas) {  // ordem decrescente
+                fseek(PtrRanking, i * sizeof(TpRankingConcurso), 0);
+                fwrite(&reg2, sizeof(TpRankingConcurso), 1, PtrRanking);
+                fwrite(&reg1, sizeof(TpRankingConcurso), 1, PtrRanking);
+                trocou = 1;
+            }
+            i++;
+        }
+        n--;
+    }
+}
+
+
+void BubbleSortConcursoCrescente(FILE *PtrConcurso) {
+    TpConcurso reg1, reg2;
+    int i, j, n, trocou = 1;
+
+    fseek(PtrConcurso, 0, 2);
+    n = ftell(PtrConcurso) / sizeof(TpConcurso);
+
+    while (trocou == 1) {
+        trocou = 0;
+        i = 0;
+        while (i < n - 1) {
+            fseek(PtrConcurso, i * sizeof(TpConcurso), 0);
+            fread(&reg1, sizeof(TpConcurso), 1, PtrConcurso);
+            fread(&reg2, sizeof(TpConcurso), 1, PtrConcurso);
+
+            if (reg1.numConcurso > reg2.numConcurso) {
+                fseek(PtrConcurso, i * sizeof(TpConcurso), 0);
+                fwrite(&reg2, sizeof(TpConcurso), 1, PtrConcurso);
+                fwrite(&reg1, sizeof(TpConcurso), 1, PtrConcurso);
+                trocou = 1;
+            }
+            i = i + 1;
+        }
+        n = n - 1;
+    }
+}
+
+void BubbleSortConcursoDecrescente(FILE *PtrConcurso) {
+    TpConcurso reg1, reg2;
+    int i, j, n, trocou = 1;
+
+    fseek(PtrConcurso, 0, 2);
+    n = ftell(PtrConcurso) / sizeof(TpConcurso);
+
+    while (trocou == 1) {
+        trocou = 0;
+        i = 0;
+        while (i < n - 1) {
+            fseek(PtrConcurso, i * sizeof(TpConcurso), 0);
+            fread(&reg1, sizeof(TpConcurso), 1, PtrConcurso);
+            fread(&reg2, sizeof(TpConcurso), 1, PtrConcurso);
+
+            if (reg1.numConcurso < reg2.numConcurso) {
+                fseek(PtrConcurso, i * sizeof(TpConcurso), 0);
+                fwrite(&reg2, sizeof(TpConcurso), 1, PtrConcurso);
+                fwrite(&reg1, sizeof(TpConcurso), 1, PtrConcurso);
+                trocou = 1;
+            }
+            i = i + 1;
+        }
+        n = n - 1;
+    }
+}
+
 
 void entradaTextoControlada(int x, int y, int maxLen, char *buffer) {
     int pos = 0;
@@ -1283,7 +1433,14 @@ void exibirApostador(void){
 		printf("Erro de Abertura!");
 		c++;
 	}
-	else
+	else{
+		if(fread(&RegApostador, sizeof(TpApostadores), 1, PtrApostador) !=1 ){
+			gotoxy(l,c);
+			printf("Nenhum Apostador Cadastrado!");
+			c++;
+			getch();
+		}
+		else
 	{
 		rewind(PtrApostador);
 		fread(&RegApostador, sizeof(TpApostadores), 1, PtrApostador);
@@ -1300,6 +1457,9 @@ void exibirApostador(void){
 			gotoxy(l,c);
 			printf("Telefone: %s", RegApostador.numTel);
 			c++;
+			gotoxy(l,c);
+			printf("Status: %c", RegApostador.status);
+			c++;
 			fread(&RegApostador, sizeof(TpApostadores), 1, PtrApostador);
 			
 			gotoxy(l,c);
@@ -1311,56 +1471,74 @@ void exibirApostador(void){
 	}
 }
 
-void exibirConcurso(void){
-	FILE *PtrConcurso = fopen("Concurso.dat", "rb");
-	TpConcurso RegConcurso;
-	int l = 25, c=10;
-	
-	moldeMenuExibir();
-	limparquadro;
-	
-	
-	gotoxy(l,c);
-	printf("** EXIBIR CONCURSOS **");	
-	c++;
-	if(PtrConcurso == NULL)
-		{
-			gotoxy(l,c);
-			printf("Erro de abertura!");
-			c++;
-		}
-	else
-	{
-		fread(&RegConcurso, sizeof(TpConcurso), 1, PtrConcurso);
-		while(!feof(PtrConcurso))
-		{
-			limparquadro();
-			l = 25, c=10;
-			gotoxy(l,c);
-			printf("** CONCURSOS **");
-			c++;
-			gotoxy(l,c);
-			printf("Numero do concurso: %d", RegConcurso.numConcurso);
-			c++;
-			gotoxy(l,c);
-			printf("Data do Concurso: %d", RegConcurso.date);
-			c++;
-			for (int i = 0; i < TF; i++) {
-					gotoxy(l,c);
-    				printf("Dezena %d: %02d e %02d", i + 1,RegConcurso.dezenasSorteadas[i].numero1, RegConcurso.dezenasSorteadas[i].numero2);
-    				c++;
-    				getch();
-				}
-			fread(&RegConcurso, sizeof(TpConcurso), 1, PtrConcurso);	
-			
-			gotoxy(l,c);
-			printf("Pressione para exibir proximo concurso...");
-			c++;
-			getch();
-		}
-	fclose(PtrConcurso);
 	}
+	
+void exibirConcurso(void){
+    FILE *PtrConcurso = fopen("Concurso.dat", "rb");
+    TpConcurso RegConcurso;
+    int l = 25, c=10;
+
+    moldeMenuExibir();
+    limparquadro();  // corrigido
+
+    gotoxy(l,c);
+    printf("** EXIBIR CONCURSOS **");    
+    c++;
+
+    if(PtrConcurso == NULL)
+    {
+        gotoxy(l,c);
+        printf("Erro de abertura!");
+        c++;
+    }
+    else
+    {
+        // Tenta ler o primeiro registro
+        if(fread(&RegConcurso, sizeof(TpConcurso), 1, PtrConcurso) != 1)
+        {
+            // Não conseguiu ler nenhum registro = arquivo vazio
+            gotoxy(l,c);
+            printf("Nenhum Concurso cadastrado");
+            c++;
+            getch();
+        }
+        else
+        {
+            do
+            {
+                limparquadro();
+                l = 25; c=10;
+                gotoxy(l,c);
+                printf("** CONCURSOS **");
+                c++;
+                gotoxy(l,c);
+                printf("Numero do concurso: %d", RegConcurso.numConcurso);
+                c++;
+                gotoxy(l,c);
+                printf("Data do Concurso: %d/%d/%d", RegConcurso.date.dia, RegConcurso.date.mes, RegConcurso.date.ano);
+                c++;
+                gotoxy(l,c);
+                printf("Status: %c", RegConcurso.status);
+                c++;
+
+                for (int i = 0; i < TF; i++) {
+                    gotoxy(l,c);
+                    printf("Dezena %d: %02d e %02d", i + 1, RegConcurso.dezenasSorteadas[i].numero1, RegConcurso.dezenasSorteadas[i].numero2);
+                    c++;
+                }
+                gotoxy(l,c);
+                printf("Pressione para exibir proximo concurso...");
+                c++;
+                getch();
+
+            } while(fread(&RegConcurso, sizeof(TpConcurso), 1, PtrConcurso) == 1);
+
+            fclose(PtrConcurso);
+        }
+    }
 }
+
+
 
 void exibirAposta(){
 	FILE *PtrAposta = fopen("Apostas.dat", "rb");
@@ -1375,10 +1553,17 @@ void exibirAposta(){
 	if(PtrAposta == NULL)
 	{
 		gotoxy(l,c);
-		printf("Erro de Abertura!!");
+		printf("Nenhuma Aposta Cadastrada!!");
 		c++;
+		getch();
 	}
-	else
+	else{
+		if(fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta) != 1){
+			gotoxy(l,c);
+			printf("Nenhuma aposta cadastrada!");
+			c++;
+			getch();
+		}else
 	{
 		rewind(PtrAposta);
 		fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
@@ -1401,6 +1586,7 @@ void exibirAposta(){
 			gotoxy(l,c);
 			printf("Quantidade de dezenas apostadas: %d", RegAposta.qtdeNumApostados);
 			c++;
+			printf("Status: %c", RegAposta.status);
 			
 			fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
 			
@@ -1412,6 +1598,1392 @@ void exibirAposta(){
 		fclose(PtrAposta);
 	}
 }
+
+	}
+	
+//Exclusões Lógicas
+void exclusaoLogicaApostador(void)
+{
+	FILE *ptrApostador = fopen("Apostadores.dat", "rb+");
+	TpApostadores RegApostador;
+	
+	moldeCadastrar();
+	limparquadro();
+	
+	int Verifica, l=25, c=10;
+	char op;
+	gotoxy(l,c);
+	printf("Excluir Logicamente o apostador(Log.)");
+	c++;
+	if(ptrApostador == NULL)
+	{
+		gotoxy(l,c);
+		printf("Erro de Abertura!");
+		c++;
+	}	
+	else 
+	{
+		gotoxy(l,c);
+		printf("CPF do apostador que deseja excluir: ");
+		c++;
+		gotoxy(l,c);
+		gets(RegApostador.cpf);
+		c++;
+		while(strcmp(RegApostador.cpf, "\0") != 0)
+		{
+			Verifica = BuscarApostador(ptrApostador, RegApostador.cpf);
+			if(Verifica != -1)
+			{
+				limparquadro();
+				l=25, c=10;
+				fseek(ptrApostador, Verifica, 0);
+				fread(&RegApostador, sizeof(TpApostadores), 1, ptrApostador);
+				gotoxy(l,c);
+				printf("** Informações do apostador **");
+				c++;
+				gotoxy(l,c);
+				printf("CPF: %s", RegApostador.cpf);
+				c++;
+				gotoxy(l,c);
+				printf("Nome: %s", RegApostador.nome);
+				c++;
+				gotoxy(l,c);
+				printf("Telefone: %s", RegApostador.numTel);
+				c++;
+				gotoxy(l,c);
+				printf("Status: %c", RegApostador.status);
+				c++;
+				gotoxy(l,c);
+				printf("Deseja Excluir o Apostador? S/N");
+				c++;
+				if (toupper(getche() == 'S'))
+				{
+					RegApostador.status = 'I';
+					fseek(ptrApostador, Verifica, 0);
+					fwrite(&RegApostador, sizeof(TpApostadores), 1, ptrApostador);
+					gotoxy(l,c);
+					printf("Registro deletado");
+					c++;
+				}
+			}
+			
+				else
+				{
+					gotoxy(l,c);
+					printf("Apostador Nao Encontrado");
+					c++;	
+				}
+				gotoxy(l,c);
+				printf("CPF do apostador que deseja excluir(Log.): ");
+				c++;
+				gotoxy(l,c);
+				gets(RegApostador.cpf);
+				c++;
+		}
+		getch();
+		fclose(ptrApostador);	 	
+	}
+
+}
+
+
+
+void exclusaoLogicaConcurso(void)
+{
+	FILE *ptrConcurso = fopen("Concurso.dat", "rb+");
+	TpConcurso RegConcurso;
+	int l=25, c=10, Verifica;
+	
+	moldeCadastrar();
+	limparquadro();
+	
+	gotoxy(l,c);
+	printf("Exclusao de concursos(Log.)");
+	c++;
+	if(ptrConcurso == NULL)
+	{
+		gotoxy(l,c);
+		printf("Erro de abertura!!");
+		c++;
+	}
+	else{
+		gotoxy(l,c);
+		printf("Numero do concurso que deseja excluir: ");
+		c++;
+		gotoxy(l,c);
+		scanf("%d", &RegConcurso.numConcurso);
+		c++;
+		while(RegConcurso.numConcurso > 0)
+		{
+			limparquadro();
+			l=25, c=10;
+			Verifica = BuscarConcurso(ptrConcurso, RegConcurso.numConcurso);
+			if(Verifica != -1)
+			{
+				fseek(ptrConcurso, Verifica, 0);
+				fread(&RegConcurso, sizeof(TpConcurso), 1, ptrConcurso);
+				gotoxy(l,c);
+				printf("** Dados do concurso **");
+				c++;
+				gotoxy(l,c);
+				printf("Numero do concurso: %d", RegConcurso.numConcurso);
+				c++;
+				gotoxy(l,c);
+				printf("Data do Concurso: %d/%d/%d", RegConcurso.date.dia, RegConcurso.date.mes, RegConcurso.date.ano);
+				c++;
+				gotoxy(l,c);
+				printf("Status: %c", RegConcurso.status);
+				c++;
+				for (int i = 0; i < TF; i++) 
+				{
+					gotoxy(l,c);
+    				printf("Dezena %d: %02d e %02d", i + 1,RegConcurso.dezenasSorteadas[i].numero1, RegConcurso.dezenasSorteadas[i].numero2);
+    				c++;
+    				getch();
+				}
+				gotoxy(l,c);
+				printf("Deseja Excluir? S/N");
+				c++;
+				if(toupper(getche()) == 'S')
+				{
+					RegConcurso.status = 'I';
+					fseek(ptrConcurso, Verifica, 0);
+					fwrite(&RegConcurso, sizeof(TpConcurso), 1, ptrConcurso);
+					printf("Registro Deletado!");
+				}
+			}
+			else
+			{
+				gotoxy(l,c);
+				printf("Concurso Não Encontrado");
+				c++;
+			}
+			gotoxy(l,c);
+			printf("Numero do concurso que deseja excluir: ");
+			gotoxy(l,c);
+			scanf("%d", &RegConcurso.numConcurso);
+			c++;
+		}
+		getch();
+		fclose(ptrConcurso);
+	}
+	
+}
+
+void exclusaoLogicaAposta(void){
+	FILE *ptrAposta = fopen("Apostas.dat", "rb+");
+	TpApostas RegAposta;
+	int l=25, c=10, verifica;
+	
+	moldeCadastrar();
+	limparquadro();
+	
+	gotoxy(l,c);
+	printf("** EXCLUIR APOSTAS (log.) **");
+	c++;
+	if(ptrAposta == NULL){
+		gotoxy(l,c);
+		printf("Erro de abertura!!");
+		c++;
+	} 
+	else{
+		gotoxy(l,c);
+		printf("Numero da aposta que deseja excluir: ");
+		c++;
+		gotoxy(l,c);
+		scanf("%d", &RegAposta.numAposta);
+		c++;
+		while(RegAposta.numAposta > 0){
+			limparquadro();
+			l=25, c=10;
+			verifica = BuscarAposta(ptrAposta, RegAposta.numAposta);
+			if(verifica != -1){
+				fseek(ptrAposta, verifica, 0);
+				fread(&RegAposta, sizeof(TpApostas), 1, ptrAposta);
+				gotoxy(l,c);
+				printf("** Dados da aposta **");
+				c++;
+				gotoxy(l,c);
+				printf("Numero da Aposta: %d", RegAposta.numAposta);
+				c++;
+				gotoxy(l,c);
+				printf("CPF do APOSTADOR: %s", RegAposta.cpf);
+				c++;
+				gotoxy(l,c);
+				printf("Numero do Concurso: %d", RegAposta.numConcurso);
+				c++;
+				gotoxy(l,c);
+				printf("Quantidade de dezenas apostadas: %d", RegAposta.qtdeNumApostados);
+				c++;
+				gotoxy(l,c);
+				printf("Status: %c", RegAposta.status);
+				c++;
+				gotoxy(l,c);
+				printf("Confirma a Exclusão? S/N");
+				c++;
+				if(toupper(getche()) == 'S')
+				{
+					RegAposta.status = 'I';
+					fseek(ptrAposta, verifica, 0);
+					fwrite(&RegAposta, sizeof(TpApostas), 1, ptrAposta);
+					gotoxy(l,c);
+					printf("Registro Deletado");
+					c++;
+				}
+			}
+			else
+			{
+				gotoxy(l,c);
+				printf("Aposta não encontrada");
+				c++;
+				getch();
+			}
+			
+			limparquadro();
+			l=25, c=10;
+			gotoxy(l,c);
+			printf("Numero da aposta que deseja excluir: ");
+			c++;
+			gotoxy(l,c);
+			scanf("%d", &RegAposta.numAposta);
+			c++;	
+		}
+		getch();
+		fclose(ptrAposta);
+	}
+}
+
+
+//Exclusoes fisicas
+void exclusaoFisicaApostador(void)
+{
+    FILE *ptrApostador = fopen("Apostadores.dat", "rb");
+    TpApostadores RegApostador;
+    char AuxCPF[15];
+    int l = 25, c = 10;
+    int encontrouAtivo = 0;
+    int cpfValido = 1;
+    int cpfEncontrado = 0;
+    int confirmarExclusao = 0;
+    int apostasAtivas = 0;
+    int podeExcluir = 1;
+
+    limparquadro();
+    moldeCadastrar();
+
+    gotoxy(l, c);
+    printf("### EXCLUIR APOSTADOR E SUAS APOSTAS###");
+    c++;
+
+    if (ptrApostador == NULL)
+    {
+        gotoxy(l, c);
+        printf("Erro de abertura do arquivo de apostadores!");
+        c++;
+        podeExcluir = 0;
+    }
+    else
+    {
+        gotoxy(l, c);
+        printf("CPF do apostador: ");
+        fflush(stdin);
+        c++;
+        gets(AuxCPF);
+
+        if (strcmp(AuxCPF, "\0") == 0)
+        {
+            cpfValido = 0;
+            podeExcluir = 0;
+        }
+    }
+
+    if (podeExcluir && cpfValido)
+    {
+        rewind(ptrApostador);
+        fread(&RegApostador, sizeof(TpApostadores), 1, ptrApostador);
+        while (!feof(ptrApostador) && !encontrouAtivo)
+        {
+            if (stricmp(AuxCPF, RegApostador.cpf) == 0 && RegApostador.status != 'I')
+            {
+                encontrouAtivo = 1;
+                podeExcluir = 0;
+            }
+            fread(&RegApostador, sizeof(TpApostadores), 1, ptrApostador);
+        }
+    }
+
+    if (encontrouAtivo)
+    {
+        gotoxy(l, c);
+        printf("Apostador Ativo, exclua Logicamente primeiro");
+        c++;
+        getch();
+    }
+    else if (podeExcluir && cpfValido)
+    {
+        int verifica = BuscarApostador(ptrApostador, AuxCPF);
+        if (verifica == -1)
+        {
+            gotoxy(l, c);
+            printf("CPF não encontrado!");
+            c++;
+            cpfEncontrado = 0;
+            podeExcluir = 0;
+            getch();
+        }
+        else
+        {
+            cpfEncontrado = 1;
+            fseek(ptrApostador, verifica, 0);
+            fread(&RegApostador, sizeof(TpApostadores), 1, ptrApostador);
+
+            gotoxy(l, c);
+            printf("*** DADOS DO APOSTADOR ***");
+            c++;
+            gotoxy(l, c);
+            printf("Nome: %s", RegApostador.nome);
+            c++;
+            gotoxy(l, c);
+            printf("CPF: %s", RegApostador.cpf);
+            gotoxy(l, c);
+            printf("Telefone: %s", RegApostador.numTel);
+            c++;
+
+            gotoxy(l, c);
+            printf("Confirma a Exclusao (S/N)? ");
+            c++;
+
+            if (toupper(getche()) == 'S')
+            {
+                confirmarExclusao = 1;
+            }
+            else
+            {
+                gotoxy(l, c);
+                printf("Exclusão cancelada!");
+                c++;
+                podeExcluir = 0;
+                getch();
+            }
+        }
+    }
+
+    if (confirmarExclusao && cpfEncontrado)
+    {
+        FILE *PtrTemp = fopen("TempApostadores.dat", "wb");
+        rewind(ptrApostador);
+        fread(&RegApostador, sizeof(TpApostadores), 1, ptrApostador);
+        while (!feof(ptrApostador))
+        {
+            if (stricmp(AuxCPF, RegApostador.cpf) != 0)
+                fwrite(&RegApostador, sizeof(TpApostadores), 1, PtrTemp);
+
+            fread(&RegApostador, sizeof(TpApostadores), 1, ptrApostador);
+        }
+        fclose(PtrTemp);
+        fclose(ptrApostador);
+        remove("Apostadores.dat");
+        rename("TempApostadores.dat", "Apostadores.dat");
+
+        // Excluir apostas do apostador
+        FILE *PtrAposta = fopen("Apostas.dat", "rb");
+        FILE *PtrTempApostas = fopen("TempApostas.dat", "wb");
+        TpApostas RegAposta;
+
+        if (PtrAposta != NULL && PtrTempApostas != NULL)
+        {
+            fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+            while (!feof(PtrAposta) && apostasAtivas == 0)
+            {
+                if (stricmp(AuxCPF, RegAposta.cpf) == 0 && RegAposta.status != 'I')
+                {
+                    apostasAtivas = 1;
+                    podeExcluir = 0;
+                }
+                fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+            }
+
+            if (apostasAtivas)
+            {
+                gotoxy(l, c);
+                printf("Aposta Ativa - exclua log. primeiro!");
+                c++;
+                getch();
+            }
+            else
+            {
+                rewind(PtrAposta);
+                fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+                while (!feof(PtrAposta))
+                {
+                    if (stricmp(AuxCPF, RegAposta.cpf) != 0)
+                        fwrite(&RegAposta, sizeof(TpApostas), 1, PtrTempApostas);
+
+                    fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+                }
+
+                gotoxy(l, c);
+                printf("Apostador e apostas excluídos com sucesso!");
+                c++;
+                getch();
+            }
+
+            fclose(PtrAposta);
+            fclose(PtrTempApostas);
+
+            if (!apostasAtivas)
+            {
+                remove("Apostas.dat");
+                rename("TempApostas.dat", "Apostas.dat");
+            }
+            else
+            {
+                remove("TempApostas.dat");
+            }
+        }
+        else
+        {
+            gotoxy(l, c);
+            printf("Erro ao abrir arquivos de apostas.");
+            c++;
+            getch();
+        }
+    }
+    else
+    {
+        if (ptrApostador != NULL)
+            fclose(ptrApostador);
+    }
+}
+
+
+
+void exclusaoFisicaConcurso(void) {
+    FILE *ptrConcurso = fopen("Concurso.dat", "rb");
+    TpConcurso RegConcurso;
+    int AuxNum;
+    int verifica, l=25, c=10;
+
+    limparquadro();
+    moldeCadastrar();
+
+    gotoxy(l,c);
+    printf("### EXCLUIR CONCURSO E SUAS APOSTAS###");
+    c++;
+    if (ptrConcurso == NULL) {
+        gotoxy(l,c);
+        printf("Erro de abertura do arquivo de Concurso!");
+        c++;
+    } else {
+        gotoxy(l,c);
+        printf("Numero do Concurso: ");
+        c++;
+        scanf("%d", &AuxNum);
+
+        if (AuxNum > 0) {
+            verifica = BuscarConcurso(ptrConcurso, AuxNum);
+            if (verifica == -1) {
+                gotoxy(l,c);
+                printf("Concurso não encontrado!");
+                c++;
+                fclose(ptrConcurso);
+                getch();
+            } else {
+                gotoxy(l,c);
+                printf("*** DADOS DO CONCURSO ***");
+                c++;
+                fseek(ptrConcurso, verifica, 0);
+                fread(&RegConcurso, sizeof(TpConcurso), 1, ptrConcurso);
+                gotoxy(l,c);
+                printf("Numero do Concurso: %d", RegConcurso.numConcurso);
+                c++;
+                gotoxy(l,c);
+                printf("Data: %d %d %d", RegConcurso.date.dia, RegConcurso.date.mes, RegConcurso.date.ano);
+                c++;
+                gotoxy(l,c);
+                printf("Status: %c", RegConcurso.status);
+                c++;
+                gotoxy(l,c);
+                printf("Confirma a Exclusao (S/N)? ");
+                c++;
+                if (toupper(getche()) == 'S') {
+                    if (RegConcurso.status == 'A') {
+                        gotoxy(l,c);
+                        printf("Concurso esta ativo.");
+                        c++;
+                        fclose(ptrConcurso);
+                        getch();
+                    } else {
+                        FILE *PtrTemp = fopen("TempConcurso.dat", "wb");
+                        rewind(ptrConcurso);
+                        fread(&RegConcurso, sizeof(TpConcurso), 1, ptrConcurso);
+                        while (!feof(ptrConcurso)) {
+                            if (AuxNum != RegConcurso.numConcurso)
+                                fwrite(&RegConcurso, sizeof(TpConcurso), 1, PtrTemp);
+                            fread(&RegConcurso, sizeof(TpConcurso), 1, ptrConcurso);
+                        }
+                        fclose(PtrTemp);
+                        fclose(ptrConcurso);
+                        remove("Concurso.dat");
+                        rename("TempConcurso.dat", "Concurso.dat");
+
+                        FILE *PtrAposta = fopen("Apostas.dat", "rb");
+                        FILE *PtrTempApostas = fopen("TempApostas.dat", "wb");
+                        TpApostas RegAposta;
+
+                        if (PtrAposta != NULL && PtrTempApostas != NULL) {
+                            int podeExcluir = 1;
+
+                            fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+                            while (!feof(PtrAposta)) {
+                                if (RegAposta.numConcurso == AuxNum && RegAposta.status != 'I')
+                                    podeExcluir = 0;
+                                fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+                            }
+
+                            rewind(PtrAposta);
+
+                            if (podeExcluir == 0) {
+                                gotoxy(l,c);
+                                printf("Existem apostas ativas no concurso. Exclua/inative antes.");
+                                c++;
+                                fclose(PtrAposta);
+                                fclose(PtrTempApostas);
+                                getch();
+                            } else {
+                                fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+                                while (!feof(PtrAposta)) {
+                                    if (RegAposta.numConcurso != AuxNum)
+                                        fwrite(&RegAposta, sizeof(TpApostas), 1, PtrTempApostas);
+                                    fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+                                }
+                                fclose(PtrAposta);
+                                fclose(PtrTempApostas);
+                                remove("Apostas.dat");
+                                rename("TempApostas.dat", "Apostas.dat");
+
+                                gotoxy(l,c);
+                                printf("Concurso e apostas excluídos com sucesso!");
+                                c++;
+                                getch();
+                            }
+                        } else {
+                            gotoxy(l,c);
+                            printf("Erro ao abrir arquivos de apostas.");
+                            c++;
+                            getch();
+                        }
+                    }
+                } else {
+                    gotoxy(l,c);
+                    printf("Exclusao cancelada!");
+                    c++;
+                    getch();
+                }
+            }
+        } else {
+            fclose(ptrConcurso);
+        }
+    }
+}
+
+
+
+void GerarRelatorioAcertos(void) {
+    FILE *PtrAposta = fopen("Apostas.dat", "rb");
+    FILE *PtrConcurso = fopen("Concurso.dat", "rb");
+	
+	moldeCadastrar();
+	limparquadro();
+	
+    TpApostas RegAposta;
+    TpConcurso RegConcurso;
+
+    int totalTerno = 0, totalQuadra = 0, totalQuina = 0, l=25, c=10;
+
+    if (PtrAposta != NULL && PtrConcurso != NULL) {
+        int resultado = fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+        while (resultado == 1) {
+            rewind(PtrConcurso);
+            int encontrou = 0;
+            int resultadoConc = fread(&RegConcurso, sizeof(TpConcurso), 1, PtrConcurso);
+            while (resultadoConc == 1 && encontrou == 0) {
+                if (RegAposta.numConcurso == RegConcurso.numConcurso) {
+                    encontrou = 1;
+                } else {
+                    resultadoConc = fread(&RegConcurso, sizeof(TpConcurso), 1, PtrConcurso);
+                }
+            }
+
+            if (encontrou == 1) {
+                int acertos = 0;
+                int i = 0;
+                while (i < RegAposta.qtdeNumApostados) {
+                    int j = 0;
+                    int achouPar = 0;
+                    while (j < TF && achouPar == 0) {
+                        int a1 = RegAposta.dezenas[i].numero1;
+                        int a2 = RegAposta.dezenas[i].numero2;
+                        int s1 = RegConcurso.dezenasSorteadas[j].numero1;
+                        int s2 = RegConcurso.dezenasSorteadas[j].numero2;
+
+                        if ((a1 == s1 && a2 == s2) || (a1 == s2 && a2 == s1)) {
+                            achouPar = 1;
+                        }
+                        j++;
+                    }
+                    if (achouPar == 1) {
+                        acertos++;
+                    }
+                    i++;
+                }
+
+                if (acertos == 3) {
+                    totalTerno++;
+                    gotoxy(l,c);
+                    printf("Aposta %d - CPF: %s fez TERNO!", RegAposta.numAposta, RegAposta.cpf);
+                    c++;
+                }
+                if (acertos == 4) {
+                    totalQuadra++;
+                    gotoxy(l,c);
+                    printf("Aposta %d - CPF: %s fez QUADRA!", RegAposta.numAposta, RegAposta.cpf);
+                    c++;
+                }
+                if (acertos == 5) {
+                    totalQuina++;
+                    gotoxy(l,c);
+                    printf("Aposta %d - CPF: %s fez QUINA!", RegAposta.numAposta, RegAposta.cpf);
+                    c++;
+                }
+            }
+
+            resultado = fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+        }
+        getch();
+        
+        limparquadro();
+        l=25,c=10;
+        
+		gotoxy(l,c);
+        printf("RELATORIO FINAL:");
+        c++;
+        gotoxy(l,c);
+        printf("Total de Ternos:  %d", totalTerno);
+        c++;
+        gotoxy(l,c);
+        printf("Total de Quadras: %d", totalQuadra);
+        c++;
+        gotoxy(l,c);
+        printf("Total de Quinas:  %d", totalQuina);
+        c++;
+		
+		getch();
+        fclose(PtrAposta);
+        fclose(PtrConcurso);
+    }
+}
+
+void GerarResumoPremiadosPorConcurso(void) {
+    FILE *PtrAposta = fopen("Apostas.dat", "rb");
+    FILE *PtrConcurso = fopen("Concurso.dat", "rb");
+
+    if (PtrAposta == NULL || PtrConcurso == NULL) return;
+
+    TpConcurso RegConcurso;
+    TpApostas RegAposta;
+    TpResumo resumo[100];
+    int totalConcursos = 0;
+
+    rewind(PtrConcurso);
+    int r = fread(&RegConcurso, sizeof(TpConcurso), 1, PtrConcurso);
+    while (r == 1) {
+        resumo[totalConcursos].numConcurso = RegConcurso.numConcurso;
+        resumo[totalConcursos].premiados = 0;
+
+        rewind(PtrAposta);
+        int s = fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+        while (s == 1) {
+            if (RegAposta.numConcurso == RegConcurso.numConcurso) {
+                int acertos = 0;
+                int i = 0;
+                while (i < RegAposta.qtdeNumApostados) {
+                    int j = 0;
+                    int achou = 0;
+                    while (j < TF && achou == 0) {
+                        int a1 = RegAposta.dezenas[i].numero1;
+                        int a2 = RegAposta.dezenas[i].numero2;
+                        int s1 = RegConcurso.dezenasSorteadas[j].numero1;
+                        int s2 = RegConcurso.dezenasSorteadas[j].numero2;
+
+                        if ((a1 == s1 && a2 == s2) || (a1 == s2 && a2 == s1)) 
+                            achou = 1;
+                        j++;
+                    }
+                    if (achou == 1) 
+                        acertos++;
+                    i++;
+                }
+
+                if (acertos >= 3) 
+                    resumo[totalConcursos].premiados++;
+                
+            }
+
+            s = fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+        }
+
+        totalConcursos++;
+        r = fread(&RegConcurso, sizeof(TpConcurso), 1, PtrConcurso);
+    }
+
+    BubbleSortResumo(resumo, totalConcursos);
+
+    limparquadro();
+    int l = 25, c = 10;
+    gotoxy(l, c);
+    printf("RESUMO DE PREMIADOS POR CONCURSO:");
+    c++;
+
+    int i = 0;
+    while (i < totalConcursos) {
+        gotoxy(l, c);
+        printf("Concurso %d - Premiados: %d", resumo[i].numConcurso, resumo[i].premiados);
+        c++;
+        i++;
+    }
+
+    getch();
+    fclose(PtrAposta);
+    fclose(PtrConcurso);
+}
+
+void ListarAcertadoresPorQuantidade(void) {
+    FILE *PtrAposta = fopen("Apostas.dat", "rb");
+    FILE *PtrConcurso = fopen("Concurso.dat", "rb");
+
+    if (PtrAposta == NULL || PtrConcurso == NULL) return;
+
+    TpApostas RegAposta;
+    TpConcurso RegConcurso;
+
+    int l = 25, c = 10;
+    int numeroConcurso, quantidadeDesejada;
+
+    moldeCadastrar();
+    limparquadro();
+
+    gotoxy(l, c);
+    printf("NUMERO DO CONCURSO: ");
+    c++;
+    gotoxy(l, c);
+    numeroConcurso = lerInteiroValido(l, c, 70);
+    c++;
+    gotoxy(l, c);
+    printf("QUANTIDADE DE ACERTOS (3, 4 ou 5): ");
+    c++;
+    gotoxy(l, c);
+    quantidadeDesejada = lerInteiroValido(l, c, 70);
+    c++;
+
+    rewind(PtrConcurso);
+    int achouConcurso = 0;
+    int r = fread(&RegConcurso, sizeof(TpConcurso), 1, PtrConcurso);
+    while (r == 1 && achouConcurso == 0) {
+        if (RegConcurso.numConcurso == numeroConcurso) {
+            achouConcurso = 1;
+        } else {
+            r = fread(&RegConcurso, sizeof(TpConcurso), 1, PtrConcurso);
+        }
+    }
+
+    if (achouConcurso == 1 && (quantidadeDesejada >= 3 && quantidadeDesejada <= 5)) {
+        rewind(PtrAposta);
+        int encontrou = 0;
+        int index = fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+        while (index == 1) {
+            if (RegAposta.numConcurso == numeroConcurso) {
+                int acertos = 0, i =0;
+                TpDezenas acertosDezenas[TF];
+                int idxAcertos = 0;
+
+                while (i < RegAposta.qtdeNumApostados) {
+                    int j = 0, achou = 0;
+                    while (j < TF && achou == 0) {
+                        int a1 = RegAposta.dezenas[i].numero1;
+                        int a2 = RegAposta.dezenas[i].numero2;
+                        int s1 = RegConcurso.dezenasSorteadas[j].numero1;
+                        int s2 = RegConcurso.dezenasSorteadas[j].numero2;
+
+                        if ((a1 == s1 && a2 == s2) || (a1 == s2 && a2 == s1)) {
+                            achou = 1;
+                            acertosDezenas[idxAcertos].numero1 = a1;
+                            acertosDezenas[idxAcertos].numero2 = a2;
+                            idxAcertos++;
+                        }
+                        j++;
+                    }
+                    if (achou == 1) {
+                        acertos++;
+                    }
+                    i++;
+                }
+
+                if (acertos == quantidadeDesejada) {
+                    gotoxy(l, c);
+                    printf("Aposta %d - CPF: %s - %d acertos", RegAposta.numAposta, RegAposta.cpf, acertos);
+                    c++;
+
+                    for (int k = 0; k < idxAcertos; k++) {
+                        gotoxy(l, c);
+                        printf("  Dezena acertada %d: %02d e %02d", k + 1,
+                               acertosDezenas[k].numero1, acertosDezenas[k].numero2);
+                        c++;
+                    }
+
+                    encontrou = 1;
+                }
+            }
+            index = fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+        }
+
+        if (encontrou == 0) {
+            gotoxy(l, c);
+            printf("Nenhum apostador com %d acertos no concurso %d", quantidadeDesejada, numeroConcurso);
+            c++;
+        }
+    } else {
+        gotoxy(l, c);
+        printf("Concurso nao encontrado ou quantidade invalida");
+        c++;
+    }
+
+    getch();
+    fclose(PtrAposta);
+    fclose(PtrConcurso);
+}
+
+void NumerosMaisEMenosAparecem(void) {
+	int l=25, c=10;
+    FILE *PtrConcurso = fopen("Concurso.dat", "rb");
+    if (PtrConcurso == NULL){
+    	gotoxy(l,c);
+    	printf("Erro de abertura");
+    	c++;
+	}
+	else{
+		  int frequencia[61] = {0}; // índice 1 a 60
+
+    	TpConcurso RegConcurso;
+    	int resultado = fread(&RegConcurso, sizeof(TpConcurso), 1, PtrConcurso);
+    	while (resultado == 1) {
+        	for (int i = 0; i < TF; i++) {
+            	frequencia[RegConcurso.dezenasSorteadas[i].numero1]++;
+            	frequencia[RegConcurso.dezenasSorteadas[i].numero2]++;
+        	}
+        	resultado = fread(&RegConcurso, sizeof(TpConcurso), 1, PtrConcurso);
+    	}
+
+    	int maisFreq = 0, menosFreq = 1000000;
+    	int numMais = 0, numMenos = 0;
+
+    	for (int i = 1; i <= 60; i++) {
+        	if (frequencia[i] > maisFreq) {
+           	 maisFreq = frequencia[i];
+            	numMais = i;
+        	}
+        	if (frequencia[i] < menosFreq) {
+            	menosFreq = frequencia[i];
+            	numMenos = i;
+        	}
+    	}
+
+    	 l = 25, c = 10;
+    	moldeCadastrar();
+    	limparquadro();
+
+    	gotoxy(l, c);
+    	printf("Numero que MAIS aparece: %02d, apareceu %d vezes", numMais, maisFreq);
+    	c++;
+    	gotoxy(l, c);
+    	printf("Numero que MENOS aparece: %02d, apareceu %d vezes", numMenos, menosFreq);
+    	c++;
+
+    	getch();
+    	fclose(PtrConcurso);
+	}
+	}
+
+  
+
+void NumerosMaisEMenosApostados(void) {
+    FILE *PtrAposta = fopen("Apostas.dat", "rb");
+    int l=25,c=10;
+    if (PtrAposta == NULL){
+    	gotoxy(l,c);
+    	printf("Erro de Abertura!");
+    	c++;
+	}
+
+    int frequencia[61] = {0}; // índice de 1 a 60
+
+    TpApostas RegAposta;
+    int resultado = fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+    while (resultado == 1) {
+        for (int i = 0; i < RegAposta.qtdeNumApostados; i++) {
+            frequencia[RegAposta.dezenas[i].numero1]++;
+            frequencia[RegAposta.dezenas[i].numero2]++;
+        }
+        resultado = fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+    }
+
+    int maisFreq = 0, menosFreq = 1000000;
+    int numMais = 0, numMenos = 0;
+
+    for (int i = 1; i <= 60; i++) {
+        if (frequencia[i] > maisFreq) {
+            maisFreq = frequencia[i];
+            numMais = i;
+        }
+        if (frequencia[i] < menosFreq) {
+            menosFreq = frequencia[i];
+            numMenos = i;
+        }
+    }
+
+     l = 25, c = 10;
+    moldeCadastrar();
+    limparquadro();
+
+    gotoxy(20, c);
+    printf("Numero que MAIS foi apostado: %02d, apostado %d vezes", numMais, maisFreq);
+    c++;
+    gotoxy(20, c);
+    printf("Numero que MENOS foi apostado: %02d, apostado %d vezes", numMenos, menosFreq);
+    c++;
+
+    getch();
+    fclose(PtrAposta);
+}
+
+
+//Estatisticas Adicionais
+void consultarApostasPorCPF(void) {
+    FILE *PtrApostadores = fopen("Apostadores.dat", "rb");
+    FILE *PtrAposta = fopen("Apostas.dat", "rb");
+    char auxCpf[15];
+    int l = 25, c = 10, apostadorExiste = 0, encontrado = 0;
+    TpApostas RegAposta;
+
+    if (PtrApostadores != NULL && PtrAposta != NULL) {
+        moldeMenuCadastro();
+        limparquadro();
+        gotoxy(l, c);
+        printf("Digite o CPF do apostador para consulta: ");
+        c++;
+        entradaTextoControlada(l, c, 14, auxCpf);
+        c++;
+
+        int verifica = BuscarApostador(PtrApostadores, auxCpf);
+
+        if (verifica == -1) {
+            gotoxy(l, c);
+            printf("Apostador nao cadastrado!");
+            c++;
+            gotoxy(l, c);
+            printf("Pressione qualquer tecla para sair...");
+            getch();
+        } else {
+            rewind(PtrAposta);
+            while (fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta) == 1) {
+                if (strcmp(RegAposta.cpf, auxCpf) == 0) {
+                    encontrado = 1;
+                    gotoxy(l, c);
+                    printf("Aposta Nº %d - Concurso Nº %d - Qtde dezenas: %d", RegAposta.numAposta, RegAposta.numConcurso, RegAposta.qtdeNumApostados);
+                    c++;
+                    for (int i = 0; i < RegAposta.qtdeNumApostados; i++) {
+                        gotoxy(l + 2, c);
+                        printf("Dezena %d: %02d e %02d", i + 1, RegAposta.dezenas[i].numero1, RegAposta.dezenas[i].numero2);
+                        c++;
+                    }
+                    c++;
+                    if (c > 10) {
+                        gotoxy(l, c);
+                        printf("Pressione qualquer tecla para continuar...");
+                        getch();
+                        limparquadro();
+                        c = 10;
+                    }
+                }
+            }
+            if (encontrado == 0) {
+                gotoxy(l, c);
+                printf("Nenhuma aposta encontrada para o CPF informado.");
+                c++;
+            }
+            gotoxy(l, c);
+            printf("Pressione qualquer tecla para sair...");
+            getch();
+        }
+        fclose(PtrApostadores);
+        fclose(PtrAposta);
+    }
+}
+
+
+void ExibirArrecadacao(void) {
+    int numConcurso, posConcurso;
+    float valorAposta = 5.0, arrecadacao = 0.0;
+    FILE *PtrConcurso = fopen("Concurso.dat", "rb+");
+    FILE *PtrAposta = fopen("Apostas.dat", "rb");
+    TpApostas RegAposta;
+    int resultado, totalApostas = 0, abriuArquivos = 1, l=25, c=10;
+
+    if (PtrConcurso == NULL || PtrAposta == NULL) {
+        abriuArquivos = 0;
+    }
+
+    if (abriuArquivos == 1) {
+        moldeMenuCadastro();
+        limparquadro();
+        gotoxy(l,c);
+        printf("Digite o NUMERO do CONCURSO: ");
+        c++;
+        gotoxy(l,c);
+        scanf("%d", &numConcurso);
+        c++;
+
+        BubbleSortConcursoDecrescente(PtrConcurso);
+        posConcurso = BuscaBinariaConcurso(PtrConcurso, numConcurso);
+
+        if (posConcurso == -1) {
+            gotoxy(l,c);
+            printf("CONCURSO nao encontrado.");
+            c++;
+        } 
+		else {
+            rewind(PtrAposta);
+            resultado = fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+            while (resultado == 1) {
+                if (RegAposta.numConcurso == numConcurso) 
+                    totalApostas = totalApostas + 1;
+                resultado = fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+            }
+            arrecadacao = totalApostas * valorAposta;
+            gotoxy(l,c);
+            printf("Total arrecadado no concurso %d: R$ %.2f", numConcurso, arrecadacao);
+            c++;
+        }
+        getch();
+        limparquadro();
+    } else {
+        moldeMenuCadastro();
+        limparquadro();
+        gotoxy(l,c);
+        printf("Erro ao abrir os arquivos.");
+        c++;
+        getch();
+        limparquadro();
+    }
+
+    if (PtrConcurso != NULL) fclose(PtrConcurso);
+    if (PtrAposta != NULL) fclose(PtrAposta);
+}
+
+
+void PercentualApostadoresSemAcerto(void) {
+    FILE *PtrApostadores = fopen("Apostadores.dat", "rb");
+    FILE *PtrApostas = fopen("Apostas.dat", "rb");
+    FILE *PtrConcurso = fopen("Concurso.dat", "rb");
+
+    TpApostadores RegApostador;
+    TpApostas RegAposta;
+    TpConcurso RegConcurso;
+
+    int totalApostadores = 0,apostadoresSemAcerto = 0;
+
+    if (PtrApostadores != NULL && PtrApostas != NULL && PtrConcurso != NULL) {
+        int resultadoApostador = fread(&RegApostador, sizeof(TpApostadores), 1, PtrApostadores);
+        while (resultadoApostador == 1) {
+            totalApostadores++;
+
+            int temAcerto = 0;
+
+            rewind(PtrApostas);
+            int resultadoAposta = fread(&RegAposta, sizeof(TpApostas), 1, PtrApostas);
+            while (resultadoAposta == 1 && temAcerto == 0) {
+                if (strcmp(RegApostador.cpf, RegAposta.cpf) == 0) {
+
+                    rewind(PtrConcurso);
+                    int resultadoConc = fread(&RegConcurso, sizeof(TpConcurso), 1, PtrConcurso);
+                    int achouConcurso = 0;
+                    while (resultadoConc == 1 && achouConcurso == 0) {
+                        if (RegConcurso.numConcurso == RegAposta.numConcurso) {
+                            achouConcurso = 1;
+                        } else {
+                            resultadoConc = fread(&RegConcurso, sizeof(TpConcurso), 1, PtrConcurso);
+                        }
+                    }
+
+                    if (achouConcurso == 1) {
+                        int acertos = 0;
+                        int i = 0;
+                        while (i < RegAposta.qtdeNumApostados && temAcerto == 0) {
+                            int j = 0;
+                            int achouPar = 0;
+                            while (j < TF && achouPar == 0) {
+                                int a1 = RegAposta.dezenas[i].numero1;
+                                int a2 = RegAposta.dezenas[i].numero2;
+                                int s1 = RegConcurso.dezenasSorteadas[j].numero1;
+                                int s2 = RegConcurso.dezenasSorteadas[j].numero2;
+
+                                if ((a1 == s1 && a2 == s2) || (a1 == s2 && a2 == s1)) {
+                                    achouPar = 1;
+                                }
+                                j++;
+                            }
+                            if (achouPar == 1) {
+                                acertos++;
+                            }
+                            i++;
+                        }
+
+                        if (acertos >= 3) {
+                            temAcerto = 1;
+                        }
+                    }
+                }
+                if (temAcerto == 0) {
+                    resultadoAposta = fread(&RegAposta, sizeof(TpApostas), 1, PtrApostas);
+                }
+            }
+
+            if (temAcerto == 0) {
+                apostadoresSemAcerto++;
+            }
+
+            resultadoApostador = fread(&RegApostador, sizeof(TpApostadores), 1, PtrApostadores);
+        }
+
+        float percentual = 0.0;
+        if (totalApostadores > 0) {
+            percentual = ((float)apostadoresSemAcerto / totalApostadores) * 100.0;
+        }
+
+        int l = 25, c = 10;
+        limparquadro();
+        gotoxy(l, c);
+        printf("Total de apostadores: %d", totalApostadores);
+        c++;
+        gotoxy(l, c);
+        printf("Apostadores sem acerto relevante: %d", apostadoresSemAcerto);
+        c++;
+        gotoxy(l, c);
+        printf("Percentual sem acerto: %.2f%%", percentual);
+        c++;
+
+        fclose(PtrApostadores);
+        fclose(PtrApostas);
+        fclose(PtrConcurso);
+
+        getch();
+    }
+}
+
+
+
+void GerarRankingConcursos() {
+    FILE *PtrApostas = fopen("Apostas.dat", "rb");
+    FILE *PtrRanking = fopen("Ranking.dat", "wb+");
+
+    if (PtrApostas == NULL || PtrRanking == NULL) return;
+
+    TpApostas regAposta;
+    TpRankingConcurso regRanking[1000]; 
+    int countConcursos = 0, l=25,c=10;
+    moldeCadastrar();
+    limparquadro();
+
+    while (fread(&regAposta, sizeof(TpApostas), 1, PtrApostas) == 1) {
+        int i = 0, achou = 0;
+        while (i < countConcursos && achou == 0) {
+            if (regRanking[i].numConcurso == regAposta.numConcurso) {
+                regRanking[i].totalApostas++;
+                achou = 1;
+            }
+            i++;
+        }
+        if (achou == 0) {
+            regRanking[countConcursos].numConcurso = regAposta.numConcurso;
+            regRanking[countConcursos].totalApostas = 1;
+            countConcursos++;
+        }
+    }
+
+    for (int i = 0; i < countConcursos; i++) {
+        fwrite(&regRanking[i], sizeof(TpRankingConcurso), 1, PtrRanking);
+    }
+
+    fclose(PtrApostas);
+
+   
+    BubbleSortRanking(PtrRanking, countConcursos);
+
+    
+    rewind(PtrRanking);
+    TpRankingConcurso Reg;
+    int pos = 1;
+    while (fread(&Reg, sizeof(TpRankingConcurso), 1, PtrRanking) == 1) {
+    	gotoxy(l,c);
+        printf("%d - Concurso %d: %d apostas", pos, Reg.numConcurso, Reg.totalApostas);
+        c++;
+        pos++;
+    }
+	getch();
+    fclose(PtrRanking);
+}
+
+
+void CalcularMediaAcertosPorApostador() {
+    FILE *PtrApostador = fopen("Apostadores.dat", "rb");
+    FILE *PtrAposta = fopen("Apostas.dat", "rb");
+    FILE *PtrConcurso = fopen("Concurso.dat", "rb");
+
+    TpApostadores RegApostador;
+    TpApostas RegAposta;
+    TpConcurso RegConcurso;
+
+    int l = 25, c = 10;
+    moldeCadastrar();
+    limparquadro();
+
+    if (PtrApostador != NULL && PtrAposta != NULL && PtrConcurso != NULL) {
+        fread(&RegApostador, sizeof(TpApostadores), 1, PtrApostador);
+        while (!feof(PtrApostador)) {
+            int totalAcertos = 0, totalApostas = 0;
+
+            rewind(PtrAposta);
+            fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+            while (!feof(PtrAposta)) {
+                if (strcmp(RegAposta.cpf, RegApostador.cpf) == 0) {
+                    rewind(PtrConcurso);
+                    fread(&RegConcurso, sizeof(TpConcurso), 1, PtrConcurso);
+                    while (!feof(PtrConcurso)) {
+                        if (RegAposta.numConcurso == RegConcurso.numConcurso) {
+                            int acertos = 0, i = 0;
+                            while (i < RegAposta.qtdeNumApostados) {
+                                int j = 0, achou = 0;
+                                while (j < TF && achou == 0) {
+                                    int a1 = RegAposta.dezenas[i].numero1;
+                                    int a2 = RegAposta.dezenas[i].numero2;
+                                    int s1 = RegConcurso.dezenasSorteadas[j].numero1;
+                                    int s2 = RegConcurso.dezenasSorteadas[j].numero2;
+
+                                    if ((a1 == s1 && a2 == s2) || (a1 == s2 && a2 == s1)) {
+                                        achou = 1;
+                                    }
+                                    j++;
+                                }
+                                if (achou == 1) {
+                                    acertos++;
+                                }
+                                i++;
+                            }
+
+                            if (acertos >= 3) {
+                                totalAcertos += acertos;
+                            }
+
+                            totalApostas++;
+                        }
+
+                        fread(&RegConcurso, sizeof(TpConcurso), 1, PtrConcurso);
+                    }
+                }
+
+                fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+            }
+
+            gotoxy(l, c);
+            printf("CPF: %s - Media de Acertos: ", RegApostador.cpf);
+            if (totalApostas > 0) {
+                printf("%.2f", (float)totalAcertos / totalApostas);
+            } else {
+                printf("0.00");
+            }
+            c++;
+
+            fread(&RegApostador, sizeof(TpApostadores), 1, PtrApostador);
+        }
+
+        gotoxy(l, c + 1);
+        printf("Pressione qualquer tecla para continuar...");
+        getch();
+
+        fclose(PtrApostador);
+        fclose(PtrAposta);
+        fclose(PtrConcurso);
+    }
+}
+
+
+void DistribuicaoParticipacaoApostadores() {
+    FILE *PtrAposta = fopen("Apostas.dat", "rb");
+    FILE *PtrApostador = fopen("Apostadores.dat", "rb");
+
+    TpApostadores RegApostador;
+    TpApostas RegAposta;
+
+    int totalUm = 0, totalMaisDeUm = 0, maxApostas = 0, total = 0, i = 0;
+
+    if (PtrAposta != NULL && PtrApostador != NULL) {
+        fseek(PtrApostador, 0, 2);
+        int totalApostadores = ftell(PtrApostador) / sizeof(TpApostadores);
+        rewind(PtrApostador);
+
+        while (i < totalApostadores) {
+            fseek(PtrApostador, i * sizeof(TpApostadores), 0);
+            fread(&RegApostador, sizeof(TpApostadores), 1, PtrApostador);
+
+            int cont = 0;
+            rewind(PtrAposta);
+            fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+            while (!feof(PtrAposta)) {
+                if (strcmp(RegAposta.cpf, RegApostador.cpf) == 0) {
+                    cont++;
+                }
+                fread(&RegAposta, sizeof(TpApostas), 1, PtrAposta);
+            }
+
+            if (cont == 1) {
+                totalUm++;
+            } else if (cont > 1) {
+                totalMaisDeUm++;
+            }
+
+            if (cont > maxApostas) {
+                maxApostas = cont;
+            }
+
+            i++;
+        }
+
+        limparquadro();
+        moldeCadastrar();
+        gotoxy(25, 10);
+        printf("Total de apostadores com apenas uma aposta: %d", totalUm);
+        gotoxy(25, 11);
+        printf("Total de apostadores com mais de uma aposta: %d", totalMaisDeUm);
+        gotoxy(25, 12);
+        printf("Maior numero de apostas feitas por um apostador: %d", maxApostas);
+        getch();
+
+        fclose(PtrAposta);
+        fclose(PtrApostador);
+    }
+}
+
+
 
 char menu(void) {
 	printf("# # # # MENU # # # # \n");
@@ -1531,10 +3103,10 @@ char menuExclLF(void) {
 	moldeMenuTipoExclusao();
 
 	gotoxy(23,15);
-	printf("[1] FISICA");
+	printf("[1] LOGICA");
 	
 	gotoxy(54,15);
-	printf("[2] LOGICA");
+	printf("[2] FISICA");
 	gotoxy(76,23);
 
 	return getch();
@@ -1556,7 +3128,24 @@ char menuExcl(void) {
 	gotoxy(53,19);
 	gotoxy(76,23);
 
-	return getch();
+	return getche();
+}
+
+char menuExclFisicaa(void) {
+	clrscr();
+	moldeMenuExcluirFisica();
+	
+	gotoxy(22,12);
+	printf("[1] APOSTADOR");
+
+	gotoxy(51,12);
+	printf("[2] CONCURSOS");
+
+	
+	gotoxy(53,19);
+	gotoxy(76,23);
+
+	return getche();
 }
 
 char menuRel(void) {
@@ -1564,57 +3153,57 @@ char menuRel(void) {
 	moldeMenuRelatorio();
 
 	gotoxy(17,11); printf("Exibir");
-	gotoxy(13,12); printf("[1] Estado");
-	gotoxy(17,13); printf("Pizza");
+	gotoxy(13,12); printf("[1] Relatorio");
+	gotoxy(17,13); printf("Acertos");
 
-	gotoxy(40,11); printf("Filtrar");
-	gotoxy(35,12); printf("[2]  Cliente");
-	gotoxy(39,13); printf("por inicial");
+	gotoxy(40,11); printf("Relatorio");
+	gotoxy(35,12); printf("[2]  Premiados");
+	gotoxy(39,13); printf("por concurso");
 
-	gotoxy(62,11); printf("Relatorio");
-	gotoxy(58,12); printf("[3]    de");
-	gotoxy(62,13); printf("Clientes");
+	gotoxy(62,11); printf("Acertadores");
+	gotoxy(58,12); printf("[3] por quant.");
+	gotoxy(62,13); printf("Especifica");
 	
-	gotoxy(26,18); printf("Motoqueiro");
-	gotoxy(22,19); printf("[4] com maior");
-	gotoxy(26,20); printf("entrega");
+	gotoxy(26,18); printf("Numeros");
+	gotoxy(22,19); printf("[4]mais/menos ");
+	gotoxy(26,20); printf("Aparecem");
 
-	gotoxy(55,18); printf("Rank");
-	gotoxy(49,19); printf("[5]    de");
-	gotoxy(54,20); printf("Pizzas");
+	gotoxy(55,18); printf("Numeros");
+	gotoxy(49,19); printf("[5] mais/menos");
+	gotoxy(54,20); printf("Apostados");
 
 	gotoxy(76,23);
 
-	return getch();
+	return getche();
 }
 
 char menuEst(void) {
 	clrscr();
 	moldeMenuEstatisticas();
 
-	gotoxy(16,11); printf("Relatorio");
-	gotoxy(13,12); printf("[1]  Pizza");
-	gotoxy(16,13); printf("mais pedida");
+	gotoxy(16,11); printf("Consultar");
+	gotoxy(13,12); printf("[1]  Apostas");
+	gotoxy(16,13); printf("por cpf");
 
-	gotoxy(38,11); printf("Relatorio");
-	gotoxy(35,12); printf("[2]  Pizza");
-	gotoxy(38,13); printf("menos pedida");
+	gotoxy(38,11); printf("Exibir");
+	gotoxy(35,12); printf("[2] Arrecadacao");
+	gotoxy(38,13); printf("por concurso");
 
-	gotoxy(60,11); printf("Cliente que");
-	gotoxy(58,12); printf("[3] mais pede");
-	gotoxy(64,13); printf("Pizza");
+	gotoxy(60,11); printf("Percentual");
+	gotoxy(58,12); printf("[3]apostadores");
+	gotoxy(64,13); printf("s/acertos");
 	
-	gotoxy(16,18); printf("Motoqueiro");
-	gotoxy(13,19); printf("[4]  menos");
-	gotoxy(16,20); printf("experiente");
+	gotoxy(16,18); printf("Ranking");
+	gotoxy(13,19); printf("[4]  Apostas");
+	gotoxy(16,20); printf("por concurso");
 
-	gotoxy(36,18); printf("Motoqueiro com");
-	gotoxy(35,19); printf("[5]mais entregas");
-	gotoxy(40,20); printf("no dia");
+	gotoxy(36,18); printf("Media de ");
+	gotoxy(35,19); printf("[5]acertos cada");
+	gotoxy(40,20); printf("apostador");
 
-	gotoxy(59,18); printf("Maior consumo");
-	gotoxy(58,19); printf("[6] de pizza");
-	gotoxy(60,20); printf("determinada");
+	gotoxy(59,18); printf("Distribuicao");
+	gotoxy(58,19); printf("[6] de apostas");
+	gotoxy(60,20); printf("");
 
 	gotoxy(76,23);
 	
@@ -1679,7 +3268,70 @@ int main(void){
 						exibirAposta();
 						break;
 				}
-			break;	
+			break;
+			case '4':
+			op = menuExclLF();
+				switch(op){
+					case '1':
+						op = menuExcl();
+							switch(op)
+							{
+								case '1':
+									exclusaoLogicaApostador();
+									break;
+									
+								case '2':
+									exclusaoLogicaConcurso();
+									break;
+								case '3':
+									exclusaoLogicaAposta();
+									break;
+							}
+					break;
+					case '2':
+						op=menuExclFisicaa();
+							switch(op){
+								case '1':
+									exclusaoFisicaApostador();
+									break;
+								case '2':
+									exclusaoFisicaConcurso();
+									break;
+							}
+							break;
+				}
+				break;
+			case '5':
+				op = menuRel();
+					switch(op){
+						case '1': GerarRelatorioAcertos();
+						break;
+						case '2':GerarResumoPremiadosPorConcurso();
+						break;
+						case '3':ListarAcertadoresPorQuantidade();
+						break;
+						case '4': NumerosMaisEMenosAparecem();
+						break;
+						case '5':NumerosMaisEMenosApostados();
+						break;
+					}
+			case '6': 
+				op = menuEst();
+					switch(op){
+						case '1': consultarApostasPorCPF();
+						break;
+						case '2': ExibirArrecadacao();
+						break;
+						case '3': PercentualApostadoresSemAcerto();
+						break;
+						case '4':GerarRankingConcursos();
+						break;
+						case '5': CalcularMediaAcertosPorApostador();
+						break;
+						case '6':DistribuicaoParticipacaoApostadores();
+						break;
+					}	
+				break;
 		}
 
 	} while(op != 27);
